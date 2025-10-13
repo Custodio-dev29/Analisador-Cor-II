@@ -41,6 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Funções de Conversão de Cor ---
+    // Constantes para conversão sRGB -> XYZ (iluminante D65)
+    const D65_X = 95.047;
+    const D65_Y = 100.0;
+    const D65_Z = 108.883;
+
+    // Constantes para a função de transferência XYZ -> Lab
+    const LAB_E = 0.008856;
+    const LAB_K = 903.3; // (29/3)^3
+
     function rgbToLab(r, g, b) {
         let rNorm = r / 255;
         let gNorm = g / 255;
@@ -54,13 +63,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let y = (rNorm * 0.2126 + gNorm * 0.7152 + bNorm * 0.0722) * 100;
         let z = (rNorm * 0.0193 + gNorm * 0.1192 + bNorm * 0.9505) * 100;
 
-        x = x / 95.047;
-        y = y / 100.000;
-        z = z / 108.883;
+        x = x / D65_X;
+        y = y / D65_Y;
+        z = z / D65_Z;
 
-        x = x > 0.008856 ? Math.pow(x, 1/3) : (7.787 * x) + 16/116;
-        y = y > 0.008856 ? Math.pow(y, 1/3) : (7.787 * y) + 16/116;
-        z = z > 0.008856 ? Math.pow(z, 1/3) : (7.787 * z) + 16/116;
+        x = x > LAB_E ? Math.pow(x, 1/3) : (LAB_K / 116 * x) + 16/116;
+        y = y > LAB_E ? Math.pow(y, 1/3) : (LAB_K / 116 * y) + 16/116;
+        z = z > LAB_E ? Math.pow(z, 1/3) : (LAB_K / 116 * z) + 16/116;
 
         return {
             l: (116 * y) - 16,
@@ -91,19 +100,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Amostragem ---
     function getAverageColor(x, y, sampleSize) {
+        if (!ctx) return { r: 0, g: 0, b: 0 };
+
         const halfSize = Math.floor(sampleSize / 2);
         let totalR = 0, totalG = 0, totalB = 0, count = 0;
 
-        for (let dy = -halfSize; dy <= halfSize; dy++) {
-            for (let dx = -halfSize; dx <= halfSize; dx++) {
-                const px = Math.max(0, Math.min(canvas.width - 1, x + dx));
-                const py = Math.max(0, Math.min(canvas.height - 1, y + dy));
-                const pixel = ctx.getImageData(px, py, 1, 1).data;
-                totalR += pixel[0];
-                totalG += pixel[1];
-                totalB += pixel[2];
-                count++;
-            }
+        const startX = Math.max(0, x - halfSize);
+        const startY = Math.max(0, y - halfSize);
+        const endX = Math.min(canvas.width, x + halfSize + 1);
+        const endY = Math.min(canvas.height, y + halfSize + 1);
+
+        const width = endX - startX;
+        const height = endY - startY;
+        
+        const imageData = ctx.getImageData(startX, startY, width, height);
+        const data = imageData.data;
+        count = data.length / 4;
+
+        for (let i = 0; i < data.length; i += 4) {
+            totalR += data[i]; totalG += data[i+1]; totalB += data[i+2];
         }
 
         return {
@@ -116,29 +131,32 @@ document.addEventListener('DOMContentLoaded', () => {
     function drawZoomPreview(x, y) {
         if (!zoomCtx || !ctx) return;
 
-        const zoomSize = 20;
-        const halfZoom = Math.floor(zoomSize / 2);
+        const zoomAreaSize = 21; // Use an odd number for a clear center
+        const halfZoom = Math.floor(zoomAreaSize / 2);
         
         zoomCtx.imageSmoothingEnabled = false;
         zoomCtx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
 
-        for (let dy = -halfZoom; dy <= halfZoom; dy++) {
-            for (let dx = -halfZoom; dx <= halfZoom; dx++) {
-                const px = Math.max(0, Math.min(canvas.width - 1, x + dx));
-                const py = Math.max(0, Math.min(canvas.height - 1, y + dy));
-                const pixel = ctx.getImageData(px, py, 1, 1).data;
-                
-                zoomCtx.fillStyle = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
-                const drawX = (dx + halfZoom) * (zoomCanvas.width / zoomSize);
-                const drawY = (dy + halfZoom) * (zoomCanvas.height / zoomSize);
-                zoomCtx.fillRect(drawX, drawY, zoomCanvas.width / zoomSize, zoomCanvas.height / zoomSize);
-            }
-        }
+        const startX = Math.max(0, x - halfZoom);
+        const startY = Math.max(0, y - halfZoom);
+        const width = Math.min(zoomAreaSize, canvas.width - startX);
+        const height = Math.min(zoomAreaSize, canvas.height - startY);
+
+        if (width <= 0 || height <= 0) return;
+
+        const imageData = ctx.getImageData(startX, startY, width, height);
+        
+        // Draw the magnified image pixel by pixel
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+        zoomCtx.drawImage(tempCanvas, 0, 0, width, height, 0, 0, zoomCanvas.width, zoomCanvas.height);
 
         // Desenha marcador do centro
         const centerX = zoomCanvas.width / 2;
         const centerY = zoomCanvas.height / 2;
-        const cellSize = zoomCanvas.width / zoomSize;
+        const cellSize = zoomCanvas.width / zoomAreaSize;
         
         zoomCtx.strokeStyle = '#ff0000';
         zoomCtx.lineWidth = 2;
@@ -386,26 +404,31 @@ document.addEventListener('DOMContentLoaded', () => {
         state.referencePalette.forEach((color, index) => {
             const item = document.createElement('div');
             item.className = 'palette-item';
+            item.addEventListener('click', () => setActiveReferenceColor(color));
+
             if (state.activeReferenceColor && color.hex === state.activeReferenceColor.hex) {
                 item.classList.add('active');
             }
+
             const swatch = document.createElement('div');
             swatch.className = 'palette-swatch';
             swatch.style.backgroundColor = color.hex;
+            item.appendChild(swatch);
+
             const hexText = document.createElement('span');
             hexText.textContent = color.hex.toUpperCase();
+            item.appendChild(hexText);
+
             const removeBtn = document.createElement('button');
             removeBtn.className = 'palette-item-remove';
             removeBtn.innerHTML = '&times;';
             removeBtn.title = 'Remover cor';
-            item.appendChild(swatch);
-            item.appendChild(hexText);
-            item.appendChild(removeBtn);
-            item.addEventListener('click', () => setActiveReferenceColor(color));
             removeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 removePaletteItem(color, index);
             });
+            item.appendChild(removeBtn);
+
             paletteList.appendChild(item);
         });
     }
@@ -430,37 +453,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!analysisHistoryBody) return;
         analysisHistoryBody.innerHTML = '';
 
+        const fragment = document.createDocumentFragment();
+
         state.analysisHistory.forEach((analysis, index) => {
             const { refColor, selColor, deltaE } = analysis;
             const interpretation = interpretDeltaE(deltaE);
 
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <div class="color-cell">
-                        <div class="history-swatch" style="background-color: ${refColor.hex};"></div>
-                        <span>${refColor.hex.toUpperCase()}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="color-cell">
-                        <div class="history-swatch" style="background-color: ${selColor.hex};"></div>
-                        <span>${selColor.hex.toUpperCase()}</span>
-                    </div>
-                </td>
-                <td>${deltaE.toFixed(2)}</td>
-                <td><span class="interpretation-badge ${interpretation.class}">${interpretation.text}</span></td>
-                <td>
-                    <button class="remove-history-btn" title="Remover análise">&times;</button>
-                </td>
-            `;
 
-            row.querySelector('.remove-history-btn').addEventListener('click', () => {
-                removeAnalysisHistoryItem(index);
+            // Células de Cor (Ref e Sel)
+            [refColor, selColor].forEach(color => {
+                const cell = document.createElement('td'); 
+                cell.setAttribute('data-label', color === refColor ? 'Cor de Referência' : 'Cor Analisada');
+                cell.innerHTML = `<div class="color-cell"><div class="history-swatch" style="background-color: ${color.hex};"></div><span>${color.hex.toUpperCase()}</span></div>`;
+                row.appendChild(cell);
             });
 
-            analysisHistoryBody.appendChild(row);
+            // Célula Delta E
+            const deltaECell = document.createElement('td');
+            deltaECell.setAttribute('data-label', 'Diferença (ΔE)');
+            deltaECell.textContent = deltaE.toFixed(2);
+            row.appendChild(deltaECell);
+
+            // Célula Interpretação
+            const interpretationCell = document.createElement('td');
+            interpretationCell.setAttribute('data-label', 'Interpretação');
+            interpretationCell.innerHTML = `<span class="interpretation-badge ${interpretation.class}">${interpretation.text}</span>`;
+            row.appendChild(interpretationCell);
+
+            // Célula Ação
+            const actionCell = document.createElement('td');
+            actionCell.setAttribute('data-label', 'Ação');
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-history-btn';
+            removeBtn.title = 'Remover análise';
+            removeBtn.innerHTML = '&times;';
+            // Adiciona um wrapper para centralizar o botão no layout de cartão
+            const btnWrapper = document.createElement('div');
+            btnWrapper.appendChild(removeBtn);
+            removeBtn.addEventListener('click', () => {
+                removeAnalysisHistoryItem(index);
+            });
+            actionCell.appendChild(removeBtn);
+            row.appendChild(actionCell);
+
+            fragment.appendChild(row);
         });
+        analysisHistoryBody.appendChild(fragment);
     }
 
     function removeAnalysisHistoryItem(index) {
@@ -489,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
             refColorMarker.style.left = `${refColor.lab.l}%`;
             refColorMarker.style.visibility = 'visible';
             
-            colorRuler.style.background = `linear-gradient(to right, #000000 0%, #808080 50%, #ffffff 100%)`;
+            if (colorRuler) colorRuler.style.background = `linear-gradient(to right, #000000 0%, #808080 50%, #ffffff 100%)`;
         } else {
             refColorPreview.style.backgroundColor = '#f0f0f0';
             refHexCell.textContent = '-';
@@ -497,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
             refLabCell.textContent = '-';
             refLightnessCell.textContent = '-';
             refColorMarker.style.visibility = 'hidden';
-            colorRuler.style.background = 'linear-gradient(to right, #000000, #808080, #ffffff)';
+            if (colorRuler) colorRuler.style.background = 'linear-gradient(to right, #000000, #808080, #ffffff)';
         }
 
         if (selColor) {
@@ -608,4 +647,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicialização
     renderPalette();
     renderAnalysisHistory();
+    updateComparisonUI();
 });

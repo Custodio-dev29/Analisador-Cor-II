@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="main-container">
+    <main class="main-container">
         <h1>Analisador de Cores de Imagem</h1>
         
-        <div class="warning-banner">
+        <section class="warning-banner">
             ⚠️ <strong>Importante:</strong> A precisão da análise depende da calibração do seu monitor e das condições de iluminação ao capturar fotos. Para melhores resultados, use iluminação uniforme e neutra.
-        </div>
+        </section>
 
-        <div class="controls">
+        <section class="controls">
             <label class="control-btn file-label" for="image-uploader">Carregar Imagem
                 <input type="file" id="image-uploader" accept="image/*" aria-hidden="true">
             </label>
@@ -22,15 +22,15 @@
                 <input type="file" id="image-capturer" accept="image/*" capture="environment" aria-hidden="true">
             </label>
             <button class="control-btn" id="export-data-btn">Exportar Dados</button>
-        </div>
+        </section>
 
-        <div class="settings-panel">
-            <label>
+        <section class="settings-panel">
+            <label for="sample-size">
                 Tamanho da Amostra:
                 <input type="range" id="sample-size" min="1" max="15" value="5" step="2">
                 <span id="sample-size-value">5x5</span>
             </label>
-        </div>
+        </section>
 
         <div class="content-area">
             <div class="canvas-wrapper">
@@ -43,6 +43,7 @@
             </div>
             <div class="info-wrapper">
                 <table class="comparison-table">
+                    <caption>Tabela comparativa entre a cor de referência e a cor selecionada</caption>
                     <thead>
                         <tr>
                             <th>Métrica</th>
@@ -68,13 +69,13 @@
                 <button id="add-to-palette-btn">Adicionar à Paleta</button>
                 <button id="save-analysis-btn">Salvar Análise</button>
             </div>
-            <div class="palette-container">
+            <section class="palette-container">
                 <h3>Paleta de Referência</h3>
                 <div id="palette-list"></div>
-            </div>
+            </section>
         </div>
 
-        <div class="color-ruler-container">
+        <section class="color-ruler-container">
             <p>Escala de Luminosidade (L* no espaço Lab)</p>
             <div class="ruler-wrapper">
                 <div id="color-ruler" class="color-ruler"></div>
@@ -86,11 +87,12 @@
                 <span>Médio (L*=50)</span>
                 <span>Claro (L*=100)</span>
             </div>
-        </div>
+        </section>
 
-        <div class="analysis-history-container">
+        <section class="analysis-history-container">
             <h3>Histórico de Análises</h3>
             <table class="analysis-history-table">
+                <caption>Histórico de análises de cores salvas</caption>
                 <thead>
                     <tr>
                         <th>Cor de Referência</th>
@@ -102,8 +104,8 @@
                 </thead>
                 <tbody id="analysis-history-body"></tbody>
             </table>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script src="app.js" defer></script>
 </body>
