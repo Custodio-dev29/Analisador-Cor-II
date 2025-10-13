@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador de Cores de Imagem</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="main-container">
+        <h1>Analisador de Cores de Imagem</h1>
+        
+        <div class="warning-banner">
+            ⚠️ <strong>Importante:</strong> A precisão da análise depende da calibração do seu monitor e das condições de iluminação ao capturar fotos. Para melhores resultados, use iluminação uniforme e neutra.
+        </div>
+
+        <div class="controls">
+            <label class="control-btn file-label" for="image-uploader">Carregar Imagem
+                <input type="file" id="image-uploader" accept="image/*" aria-hidden="true">
+            </label>
+            <label class="control-btn file-label" for="image-capturer">Tirar Foto
+                <input type="file" id="image-capturer" accept="image/*" capture="environment" aria-hidden="true">
+            </label>
+            <button class="control-btn" id="export-data-btn">Exportar Dados</button>
+        </div>
+
+        <div class="settings-panel">
+            <label>
+                Tamanho da Amostra:
+                <input type="range" id="sample-size" min="1" max="15" value="5" step="2">
+                <span id="sample-size-value">5x5</span>
+            </label>
+        </div>
+
+        <div class="content-area">
+            <div class="canvas-wrapper">
+                <canvas id="image-canvas" tabindex="0" aria-label="Área da imagem para análise de cor"></canvas>
+                <div id="image-click-marker" aria-hidden="true"></div>
+                <div class="zoom-preview">
+                    <p style="margin: 0.5rem 0; font-size: 0.9rem;">Área Ampliada:</p>
+                    <canvas id="zoom-canvas" class="zoom-canvas" width="100" height="100"></canvas>
+                </div>
+            </div>
+            <div class="info-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Métrica</th>
+                            <th>Cor de Referência</th>
+                            <th>Cor Selecionada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Pré-visualização</td>
+                            <td><div id="ref-color-preview" class="table-swatch"></div></td>
+                            <td><div id="color-preview" class="table-swatch"></div></td>
+                        </tr>
+                        <tr id="hex-row"><td>HEX</td><td>-</td><td>-</td></tr>
+                        <tr id="rgb-row"><td>RGB</td><td>-</td><td>-</td></tr>
+                        <tr id="lab-row"><td>Lab</td><td>-</td><td>-</td></tr>
+                        <tr id="lightness-row"><td>Luminosidade (L*)</td><td>-</td><td>-</td></tr>
+                        <tr id="diff-row"><td>Diferença (ΔE)</td><td colspan="2">-</td></tr>
+                        <tr id="interpretation-row"><td>Interpretação</td><td colspan="2">-</td></tr>
+                    </tbody>
+                </table>
+                <button id="set-as-ref-btn">Definir como Referência</button>
+                <button id="add-to-palette-btn">Adicionar à Paleta</button>
+                <button id="save-analysis-btn">Salvar Análise</button>
+            </div>
+            <div class="palette-container">
+                <h3>Paleta de Referência</h3>
+                <div id="palette-list"></div>
+            </div>
+        </div>
+
+        <div class="color-ruler-container">
+            <p>Escala de Luminosidade (L* no espaço Lab)</p>
+            <div class="ruler-wrapper">
+                <div id="color-ruler" class="color-ruler"></div>
+                <div id="ref-color-marker"><span>Ref</span></div>
+                <div id="color-marker"><span>Sel</span></div>
+            </div>
+            <div class="ruler-labels">
+                <span>Escuro (L*=0)</span>
+                <span>Médio (L*=50)</span>
+                <span>Claro (L*=100)</span>
+            </div>
+        </div>
+
+        <div class="analysis-history-container">
+            <h3>Histórico de Análises</h3>
+            <table class="analysis-history-table">
+                <thead>
+                    <tr>
+                        <th>Cor de Referência</th>
+                        <th>Cor Analisada</th>
+                        <th>Diferença (ΔE)</th>
+                        <th>Interpretação</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="analysis-history-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js" defer></script>
+</body>
+</html>

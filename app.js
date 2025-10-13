@@ -1,0 +1,611 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const PALETTE_STORAGE_KEY = 'colorAnalyzerPalette';
+    const ANALYSIS_HISTORY_KEY = 'colorAnalysisHistory';
+    const canvas = document.getElementById('image-canvas');
+    const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
+    const zoomCanvas = document.getElementById('zoom-canvas');
+    const zoomCtx = zoomCanvas ? zoomCanvas.getContext('2d') : null;
+    const imageUploader = document.getElementById('image-uploader');
+    const imageCapturer = document.getElementById('image-capturer');
+    const imageClickMarker = document.getElementById('image-click-marker');
+    const setAsRefBtn = document.getElementById('set-as-ref-btn');
+    const addToPaletteBtn = document.getElementById('add-to-palette-btn');
+    const saveAnalysisBtn = document.getElementById('save-analysis-btn');
+    const exportDataBtn = document.getElementById('export-data-btn');
+    const paletteList = document.getElementById('palette-list');
+    const analysisHistoryBody = document.getElementById('analysis-history-body');
+    const sampleSizeInput = document.getElementById('sample-size');
+    const sampleSizeValue = document.getElementById('sample-size-value');
+
+    const refColorPreview = document.getElementById('ref-color-preview');
+    const colorPreview = document.getElementById('color-preview');
+    const hexRow = document.getElementById('hex-row');
+    const rgbRow = document.getElementById('rgb-row');
+    const labRow = document.getElementById('lab-row');
+    const lightnessRow = document.getElementById('lightness-row');
+    const diffRow = document.getElementById('diff-row');
+    const interpretationRow = document.getElementById('interpretation-row');
+    const colorMarker = document.getElementById('color-marker');
+    const refColorMarker = document.getElementById('ref-color-marker');
+    const colorRuler = document.getElementById('color-ruler');
+
+    let state = {
+        originalImage: null,
+        activeReferenceColor: null,
+        referencePalette: loadPaletteFromStorage(),
+        analysisHistory: loadAnalysisHistoryFromStorage(),
+        currentSelectedColor: null,
+        sampleSize: 5,
+        lastClickX: 0,
+        lastClickY: 0
+    };
+
+    // --- Funções de Conversão de Cor ---
+    function rgbToLab(r, g, b) {
+        let rNorm = r / 255;
+        let gNorm = g / 255;
+        let bNorm = b / 255;
+
+        rNorm = rNorm > 0.04045 ? Math.pow((rNorm + 0.055) / 1.055, 2.4) : rNorm / 12.92;
+        gNorm = gNorm > 0.04045 ? Math.pow((gNorm + 0.055) / 1.055, 2.4) : gNorm / 12.92;
+        bNorm = bNorm > 0.04045 ? Math.pow((bNorm + 0.055) / 1.055, 2.4) : bNorm / 12.92;
+
+        let x = (rNorm * 0.4124 + gNorm * 0.3576 + bNorm * 0.1805) * 100;
+        let y = (rNorm * 0.2126 + gNorm * 0.7152 + bNorm * 0.0722) * 100;
+        let z = (rNorm * 0.0193 + gNorm * 0.1192 + bNorm * 0.9505) * 100;
+
+        x = x / 95.047;
+        y = y / 100.000;
+        z = z / 108.883;
+
+        x = x > 0.008856 ? Math.pow(x, 1/3) : (7.787 * x) + 16/116;
+        y = y > 0.008856 ? Math.pow(y, 1/3) : (7.787 * y) + 16/116;
+        z = z > 0.008856 ? Math.pow(z, 1/3) : (7.787 * z) + 16/116;
+
+        return {
+            l: (116 * y) - 16,
+            a: 500 * (x - y),
+            b: 200 * (y - z)
+        };
+    }
+
+    function calculateDeltaE(lab1, lab2) {
+        const deltaL = lab1.l - lab2.l;
+        const deltaA = lab1.a - lab2.a;
+        const deltaB = lab1.b - lab2.b;
+        return Math.sqrt(deltaL * deltaL + deltaA * deltaA + deltaB * deltaB);
+    }
+
+    function interpretDeltaE(deltaE) {
+        if (deltaE < 1) return { text: "Diferença imperceptível", class: "badge-imperceptible" };
+        if (deltaE < 2) return { text: "Diferença apenas perceptível", class: "badge-slight" };
+        if (deltaE < 3.5) return { text: "Diferença perceptível (observador treinado)", class: "badge-noticeable" };
+        if (deltaE < 5) return { text: "Diferença claramente perceptível", class: "badge-clear" };
+        if (deltaE < 10) return { text: "Diferença significativa", class: "badge-significant" };
+        return { text: "Cores muito diferentes", class: "badge-very-different" };
+    }
+
+    function rgbToHex(r, g, b) {
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    // --- Amostragem ---
+    function getAverageColor(x, y, sampleSize) {
+        const halfSize = Math.floor(sampleSize / 2);
+        let totalR = 0, totalG = 0, totalB = 0, count = 0;
+
+        for (let dy = -halfSize; dy <= halfSize; dy++) {
+            for (let dx = -halfSize; dx <= halfSize; dx++) {
+                const px = Math.max(0, Math.min(canvas.width - 1, x + dx));
+                const py = Math.max(0, Math.min(canvas.height - 1, y + dy));
+                const pixel = ctx.getImageData(px, py, 1, 1).data;
+                totalR += pixel[0];
+                totalG += pixel[1];
+                totalB += pixel[2];
+                count++;
+            }
+        }
+
+        return {
+            r: Math.round(totalR / count),
+            g: Math.round(totalG / count),
+            b: Math.round(totalB / count)
+        };
+    }
+
+    function drawZoomPreview(x, y) {
+        if (!zoomCtx || !ctx) return;
+
+        const zoomSize = 20;
+        const halfZoom = Math.floor(zoomSize / 2);
+        
+        zoomCtx.imageSmoothingEnabled = false;
+        zoomCtx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+
+        for (let dy = -halfZoom; dy <= halfZoom; dy++) {
+            for (let dx = -halfZoom; dx <= halfZoom; dx++) {
+                const px = Math.max(0, Math.min(canvas.width - 1, x + dx));
+                const py = Math.max(0, Math.min(canvas.height - 1, y + dy));
+                const pixel = ctx.getImageData(px, py, 1, 1).data;
+                
+                zoomCtx.fillStyle = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+                const drawX = (dx + halfZoom) * (zoomCanvas.width / zoomSize);
+                const drawY = (dy + halfZoom) * (zoomCanvas.height / zoomSize);
+                zoomCtx.fillRect(drawX, drawY, zoomCanvas.width / zoomSize, zoomCanvas.height / zoomSize);
+            }
+        }
+
+        // Desenha marcador do centro
+        const centerX = zoomCanvas.width / 2;
+        const centerY = zoomCanvas.height / 2;
+        const cellSize = zoomCanvas.width / zoomSize;
+        
+        zoomCtx.strokeStyle = '#ff0000';
+        zoomCtx.lineWidth = 2;
+        zoomCtx.strokeRect(centerX - cellSize/2, centerY - cellSize/2, cellSize, cellSize);
+    }
+
+    function handleCanvasClick(e) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches ? e.touches[0] : null;
+        const clientX = touch ? touch.clientX : e.clientX;
+        const clientY = touch ? touch.clientY : e.clientY;
+
+        const relativeX = (clientX - rect.left) / rect.width;
+        const relativeY = (clientY - rect.top) / rect.height;
+
+        let x = Math.floor(relativeX * canvas.width);
+        let y = Math.floor(relativeY * canvas.height);
+
+        x = Math.max(0, Math.min(canvas.width - 1, x));
+        y = Math.max(0, Math.min(canvas.height - 1, y));
+
+        state.lastClickX = x;
+        state.lastClickY = y;
+
+        const avgColor = getAverageColor(x, y, state.sampleSize);
+        const lab = rgbToLab(avgColor.r, avgColor.g, avgColor.b);
+        
+        const selectedColor = {
+            r: avgColor.r,
+            g: avgColor.g,
+            b: avgColor.b,
+            lab: lab,
+            hex: rgbToHex(avgColor.r, avgColor.g, avgColor.b)
+        };
+
+        state.currentSelectedColor = selectedColor;
+
+        if (imageClickMarker) {
+            const markerX = clientX - rect.left;
+            const markerY = clientY - rect.top;
+            imageClickMarker.style.left = `${markerX}px`;
+            imageClickMarker.style.top = `${markerY}px`;
+            imageClickMarker.style.visibility = 'visible';
+        }
+
+        drawZoomPreview(x, y);
+        updateComparisonUI();
+    }
+
+    function handleImageLoad(e) {
+        try {
+            if (!e.target.files || e.target.files.length === 0) {
+                alert('Nenhum arquivo selecionado.');
+                return;
+            }
+
+            const file = e.target.files[0];
+
+            if (file.type && !file.type.startsWith('image/')) {
+                alert('Por favor, selecione um arquivo de imagem válido.');
+                return;
+            }
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            const finalizeImage = (source) => {
+                let loadTimeout = setTimeout(() => {
+                    img.src = '';
+                    alert('Tempo excedido ao carregar a imagem. Tente novamente.');
+                }, 30000);
+                
+                img.onload = () => {
+                    clearTimeout(loadTimeout);
+                    try {
+                        if (!img.complete || !img.naturalWidth) {
+                            throw new Error('Imagem carregada mas dimensões indisponíveis');
+                        }
+                        
+                        state.originalImage = img;
+                        drawImageOnCanvas(img);
+                        if (imageClickMarker) imageClickMarker.style.visibility = 'hidden';
+                        if (zoomCtx) zoomCtx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
+                        state.activeReferenceColor = null;
+                        state.currentSelectedColor = null;
+                        updateComparisonUI();
+                    } catch (err) {
+                        alert('Erro ao desenhar a imagem no canvas.');
+                    }
+                };
+                
+                img.onerror = () => {
+                    clearTimeout(loadTimeout);
+                    alert('Erro ao carregar a imagem. Tente outro formato.');
+                };
+                
+                img.src = source;
+            };
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                finalizeImage(event.target.result);
+            };
+            reader.onerror = () => {
+                try {
+                    const objectUrl = URL.createObjectURL(file);
+                    finalizeImage(objectUrl);
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+                } catch (e) {
+                    alert('Erro ao ler o arquivo de imagem.');
+                }
+            };
+
+            try {
+                reader.readAsDataURL(file);
+            } catch (readErr) {
+                try {
+                    const objectUrl = URL.createObjectURL(file);
+                    finalizeImage(objectUrl);
+                    setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+                } catch (e) {
+                    alert('Erro ao processar a imagem no dispositivo.');
+                }
+            }
+        } catch (outerErr) {
+            alert('Erro inesperado ao carregar imagem.');
+        }
+    }
+
+    function handleSetAsReference() {
+        if (state.currentSelectedColor) {
+            setActiveReferenceColor(state.currentSelectedColor);
+        }
+    }
+
+    function handleAddToPalette() {
+        if (state.currentSelectedColor) {
+            const isAlreadyInPalette = state.referencePalette.some(
+                color => color.hex === state.currentSelectedColor.hex
+            );
+            if (!isAlreadyInPalette) {
+                state.referencePalette.push(state.currentSelectedColor);
+                renderPalette();
+                savePaletteToStorage();
+            }
+        }
+    }
+
+    function handleSaveAnalysis() {
+        const { activeReferenceColor, currentSelectedColor } = state;
+        if (activeReferenceColor && currentSelectedColor) {
+            const deltaE = calculateDeltaE(currentSelectedColor.lab, activeReferenceColor.lab);
+            const newAnalysis = {
+                refColor: activeReferenceColor,
+                selColor: currentSelectedColor,
+                deltaE: deltaE,
+                timestamp: new Date().toISOString()
+            };
+            state.analysisHistory.unshift(newAnalysis);
+            saveAnalysisHistoryToStorage();
+            renderAnalysisHistory();
+        }
+    }
+
+    function handleExportData() {
+        if (state.analysisHistory.length === 0) {
+            alert('Nenhuma análise para exportar.');
+            return;
+        }
+
+        const csvHeader = 'Data/Hora,Ref HEX,Ref RGB,Ref Lab L*,Ref Lab a*,Ref Lab b*,Sel HEX,Sel RGB,Sel Lab L*,Sel Lab a*,Sel Lab b*,Delta E,Interpretação\n';
+        
+        const csvRows = state.analysisHistory.map(analysis => {
+            const { refColor, selColor, deltaE, timestamp } = analysis;
+            const interpretation = interpretDeltaE(deltaE).text;
+            const date = new Date(timestamp).toLocaleString('pt-BR');
+            
+            return [
+                date,
+                refColor.hex,
+                `"${refColor.r},${refColor.g},${refColor.b}"`,
+                refColor.lab.l.toFixed(2),
+                refColor.lab.a.toFixed(2),
+                refColor.lab.b.toFixed(2),
+                selColor.hex,
+                `"${selColor.r},${selColor.g},${selColor.b}"`,
+                selColor.lab.l.toFixed(2),
+                selColor.lab.a.toFixed(2),
+                selColor.lab.b.toFixed(2),
+                deltaE.toFixed(2),
+                `"${interpretation}"`
+            ].join(',');
+        }).join('\n');
+
+        const csvContent = csvHeader + csvRows;
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `analise_cores_${new Date().toISOString().slice(0,10)}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function handleSampleSizeChange() {
+        state.sampleSize = parseInt(sampleSizeInput.value);
+        sampleSizeValue.textContent = `${state.sampleSize}x${state.sampleSize}`;
+        
+        if (state.currentSelectedColor && state.lastClickX && state.lastClickY) {
+            const avgColor = getAverageColor(state.lastClickX, state.lastClickY, state.sampleSize);
+            const lab = rgbToLab(avgColor.r, avgColor.g, avgColor.b);
+            
+            state.currentSelectedColor = {
+                r: avgColor.r,
+                g: avgColor.g,
+                b: avgColor.b,
+                lab: lab,
+                hex: rgbToHex(avgColor.r, avgColor.g, avgColor.b)
+            };
+            
+            drawZoomPreview(state.lastClickX, state.lastClickY);
+            updateComparisonUI();
+        }
+    }
+
+    // Event Listeners
+    if (imageUploader) imageUploader.addEventListener('change', handleImageLoad);
+    if (imageCapturer) imageCapturer.addEventListener('change', handleImageLoad);
+    if (canvas && ctx) {
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('touchstart', handleCanvasClick, { passive: true });
+    }
+    if (setAsRefBtn) setAsRefBtn.addEventListener('click', handleSetAsReference);
+    if (addToPaletteBtn) addToPaletteBtn.addEventListener('click', handleAddToPalette);
+    if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('click', handleSaveAnalysis);
+    if (exportDataBtn) exportDataBtn.addEventListener('click', handleExportData);
+    if (sampleSizeInput) sampleSizeInput.addEventListener('input', handleSampleSizeChange);
+
+    function renderPalette() {
+        if (!paletteList) return;
+        paletteList.innerHTML = '';
+        state.referencePalette.forEach((color, index) => {
+            const item = document.createElement('div');
+            item.className = 'palette-item';
+            if (state.activeReferenceColor && color.hex === state.activeReferenceColor.hex) {
+                item.classList.add('active');
+            }
+            const swatch = document.createElement('div');
+            swatch.className = 'palette-swatch';
+            swatch.style.backgroundColor = color.hex;
+            const hexText = document.createElement('span');
+            hexText.textContent = color.hex.toUpperCase();
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'palette-item-remove';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.title = 'Remover cor';
+            item.appendChild(swatch);
+            item.appendChild(hexText);
+            item.appendChild(removeBtn);
+            item.addEventListener('click', () => setActiveReferenceColor(color));
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removePaletteItem(color, index);
+            });
+            paletteList.appendChild(item);
+        });
+    }
+
+    function setActiveReferenceColor(color) {
+        state.activeReferenceColor = color;
+        renderPalette();
+        updateComparisonUI();
+    }
+
+    function removePaletteItem(color, index) {
+        if (state.activeReferenceColor && state.activeReferenceColor.hex === color.hex) {
+            state.activeReferenceColor = null;
+        }
+        state.referencePalette.splice(index, 1);
+        savePaletteToStorage();
+        renderPalette();
+        updateComparisonUI();
+    }
+
+    function renderAnalysisHistory() {
+        if (!analysisHistoryBody) return;
+        analysisHistoryBody.innerHTML = '';
+
+        state.analysisHistory.forEach((analysis, index) => {
+            const { refColor, selColor, deltaE } = analysis;
+            const interpretation = interpretDeltaE(deltaE);
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <div class="color-cell">
+                        <div class="history-swatch" style="background-color: ${refColor.hex};"></div>
+                        <span>${refColor.hex.toUpperCase()}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="color-cell">
+                        <div class="history-swatch" style="background-color: ${selColor.hex};"></div>
+                        <span>${selColor.hex.toUpperCase()}</span>
+                    </div>
+                </td>
+                <td>${deltaE.toFixed(2)}</td>
+                <td><span class="interpretation-badge ${interpretation.class}">${interpretation.text}</span></td>
+                <td>
+                    <button class="remove-history-btn" title="Remover análise">&times;</button>
+                </td>
+            `;
+
+            row.querySelector('.remove-history-btn').addEventListener('click', () => {
+                removeAnalysisHistoryItem(index);
+            });
+
+            analysisHistoryBody.appendChild(row);
+        });
+    }
+
+    function removeAnalysisHistoryItem(index) {
+        state.analysisHistory.splice(index, 1);
+        saveAnalysisHistoryToStorage();
+        renderAnalysisHistory();
+    }
+
+    function updateComparisonUI() {
+        const refColor = state.activeReferenceColor;
+        const selColor = state.currentSelectedColor;
+
+        const refHexCell = hexRow.cells[1], selHexCell = hexRow.cells[2];
+        const refRgbCell = rgbRow.cells[1], selRgbCell = rgbRow.cells[2];
+        const refLabCell = labRow.cells[1], selLabCell = labRow.cells[2];
+        const refLightnessCell = lightnessRow.cells[1], selLightnessCell = lightnessRow.cells[2];
+        const diffCell = diffRow.cells[1];
+        const interpretationCell = interpretationRow.cells[1];
+
+        if (refColor) {
+            refColorPreview.style.backgroundColor = refColor.hex;
+            refHexCell.textContent = refColor.hex.toUpperCase();
+            refRgbCell.textContent = `(${refColor.r}, ${refColor.g}, ${refColor.b})`;
+            refLabCell.textContent = `L*:${refColor.lab.l.toFixed(1)} a*:${refColor.lab.a.toFixed(1)} b*:${refColor.lab.b.toFixed(1)}`;
+            refLightnessCell.textContent = refColor.lab.l.toFixed(2);
+            refColorMarker.style.left = `${refColor.lab.l}%`;
+            refColorMarker.style.visibility = 'visible';
+            
+            colorRuler.style.background = `linear-gradient(to right, #000000 0%, #808080 50%, #ffffff 100%)`;
+        } else {
+            refColorPreview.style.backgroundColor = '#f0f0f0';
+            refHexCell.textContent = '-';
+            refRgbCell.textContent = '-';
+            refLabCell.textContent = '-';
+            refLightnessCell.textContent = '-';
+            refColorMarker.style.visibility = 'hidden';
+            colorRuler.style.background = 'linear-gradient(to right, #000000, #808080, #ffffff)';
+        }
+
+        if (selColor) {
+            colorPreview.style.backgroundColor = selColor.hex;
+            selHexCell.textContent = selColor.hex.toUpperCase();
+            selRgbCell.textContent = `(${selColor.r}, ${selColor.g}, ${selColor.b})`;
+            selLabCell.textContent = `L*:${selColor.lab.l.toFixed(1)} a*:${selColor.lab.a.toFixed(1)} b*:${selColor.lab.b.toFixed(1)}`;
+            selLightnessCell.textContent = selColor.lab.l.toFixed(2);
+            colorMarker.style.left = `${selColor.lab.l}%`;
+            colorMarker.style.visibility = 'visible';
+        } else {
+            colorPreview.style.backgroundColor = '#f0f0f0';
+            selHexCell.textContent = '-';
+            selRgbCell.textContent = '-';
+            selLabCell.textContent = '-';
+            selLightnessCell.textContent = '-';
+            colorMarker.style.visibility = 'hidden';
+        }
+
+        if (refColor && selColor) {
+            const deltaE = calculateDeltaE(selColor.lab, refColor.lab);
+            const interpretation = interpretDeltaE(deltaE);
+            diffCell.textContent = deltaE.toFixed(2);
+            interpretationCell.innerHTML = `<span class="interpretation-badge ${interpretation.class}">${interpretation.text}</span>`;
+        } else {
+            diffCell.textContent = '-';
+            interpretationCell.textContent = '-';
+        }
+    }
+
+    function drawImageOnCanvas(img) {
+        try {
+            if (!canvas || !ctx) return;
+            
+            const maxWidth = Math.min(800, window.innerWidth - 40);
+            const maxHeight = Math.min(600, window.innerHeight - 200);
+            
+            const scale = Math.min(
+                maxWidth / img.naturalWidth,
+                maxHeight / img.naturalHeight
+            );
+            
+            const width = Math.round(img.naturalWidth * scale);
+            const height = Math.round(img.naturalHeight * scale);
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.clearRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, width, height);
+
+            try {
+                ctx.getImageData(0, 0, 1, 1);
+            } catch (e) {
+                throw new Error('Falha ao verificar se a imagem foi desenhada');
+            }
+        } catch (err) {
+            canvas.width = 320;
+            canvas.height = 240;
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = '14px sans-serif';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('Erro ao carregar imagem', canvas.width/2, canvas.height/2);
+            throw err;
+        }
+    }
+
+    function savePaletteToStorage() {
+        try {
+            const paletteData = JSON.stringify(state.referencePalette);
+            window.localStorage.setItem(PALETTE_STORAGE_KEY, paletteData);
+        } catch (e) {
+            console.error("Falha ao salvar a paleta:", e);
+        }
+    }
+
+    function loadPaletteFromStorage() {
+        try {
+            const savedPalette = window.localStorage.getItem(PALETTE_STORAGE_KEY);
+            return savedPalette ? JSON.parse(savedPalette) : [];
+        } catch (e) {
+            console.error("Falha ao carregar a paleta:", e);
+            return [];
+        }
+    }
+
+    function saveAnalysisHistoryToStorage() {
+        try {
+            const historyData = JSON.stringify(state.analysisHistory);
+            window.localStorage.setItem(ANALYSIS_HISTORY_KEY, historyData);
+        } catch (e) {
+            console.error("Falha ao salvar o histórico:", e);
+        }
+    }
+
+    function loadAnalysisHistoryFromStorage() {
+        try {
+            const savedHistory = window.localStorage.getItem(ANALYSIS_HISTORY_KEY);
+            return savedHistory ? JSON.parse(savedHistory) : [];
+        } catch (e) {
+            console.error("Falha ao carregar o histórico:", e);
+            return [];
+        }
+    }
+
+    // Inicialização
+    renderPalette();
+    renderAnalysisHistory();
+});
