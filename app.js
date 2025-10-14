@@ -429,8 +429,12 @@ document.addEventListener('DOMContentLoaded', () => {
         handleSaveAnalysis();
     });
 
-
     if (addToPaletteBtn) addToPaletteBtn.addEventListener('click', handleAddToPalette);
+    if (addToPaletteBtn) addToPaletteBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleAddToPalette();
+    });
+
     if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('click', handleSaveAnalysis);
     if (exportExcelBtn) exportExcelBtn.addEventListener('click', handleExportToExcel);
     if (sampleSizeInput) sampleSizeInput.addEventListener('input', handleSampleSizeChange);
