@@ -350,9 +350,11 @@ document.addEventListener('DOMContentLoaded', () => {
         button.textContent = message;
         button.disabled = true;
         setTimeout(() => {
-            button.textContent = originalText;
-            updateButtonStates();
-        }
+            if (button) { // Verifica se o botão ainda existe no DOM
+                button.textContent = originalText;
+                updateButtonStates();
+            }
+        }, 1500); // Exibe o feedback por 1.5 segundos
     }
 
     function handleExportToExcel() {
@@ -419,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (imageCapturer) imageCapturer.addEventListener('change', handleImageLoad);
     if (canvas && ctx) {
         canvas.addEventListener('click', handleCanvasClick);
-        canvas.addEventListener('touchstart', handleCanvasClick, { passive: true });
+        canvas.addEventListener('touchstart', handleCanvasClick, { passive: false });
     }
     if (setAsRefBtn) setAsRefBtn.addEventListener('click', handleSetAsReference);
     // Adicionando tratamento para 'touchstart' para melhor responsividade em mobile
@@ -428,6 +430,10 @@ document.addEventListener('DOMContentLoaded', () => {
         handleSetAsReference();
     });
     if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleSaveAnalysis();
+    });
+    if (addToPaletteBtn) addToPaletteBtn.addEventListener('touchstart', (e) => {
         e.preventDefault();
         handleSaveAnalysis();
     });
