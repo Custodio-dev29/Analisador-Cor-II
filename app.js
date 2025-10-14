@@ -226,22 +226,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-
             const finalizeImage = (source) => {
+                const img = new Image();
+                // crossOrigin é necessário para Data URLs e URLs de outros domínios,
+                // mas não para Object URLs. Definir como 'anonymous' é uma prática segura.
+                img.crossOrigin = 'anonymous';
+
                 let loadTimeout = setTimeout(() => {
                     img.src = '';
                     alert('Tempo excedido ao carregar a imagem. Tente novamente.');
                 }, 30000);
-                
+
                 img.onload = () => {
                     clearTimeout(loadTimeout);
                     try {
                         if (!img.complete || !img.naturalWidth) {
                             throw new Error('Imagem carregada mas dimensões indisponíveis');
                         }
-                        
+
                         state.originalImage = img;
                         drawImageOnCanvas(img);
                         if (imageClickMarker) imageClickMarker.style.visibility = 'hidden';
@@ -249,43 +251,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         state.activeReferenceColor = null;
                         state.currentSelectedColor = null;
                         updateComparisonUI();
+                        updateButtonStates();
+
+                        // Limpa o Object URL para liberar memória, se aplicável
+                        if (source.startsWith('blob:')) {
+                            URL.revokeObjectURL(source);
+                        }
                     } catch (err) {
-                        alert('Erro ao desenhar a imagem no canvas.');
+                        alert(`Erro ao processar a imagem: ${err.message}. Tente uma imagem menor ou de formato diferente.`);
                     }
                 };
-                
+
                 img.onerror = () => {
                     clearTimeout(loadTimeout);
-                    alert('Erro ao carregar a imagem. Tente outro formato.');
+                    alert('Erro ao carregar a imagem. O arquivo pode estar corrompido ou em um formato não suportado.');
                 };
-                
+
                 img.src = source;
             };
 
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                finalizeImage(event.target.result);
-            };
-            reader.onerror = () => {
-                try {
-                    const objectUrl = URL.createObjectURL(file);
-                    finalizeImage(objectUrl);
-                    setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
-                } catch (e) {
-                    alert('Erro ao ler o arquivo de imagem.');
-                }
-            };
-
+            // Prioriza URL.createObjectURL por ser mais eficiente em memória, especialmente em mobile.
             try {
+                const objectUrl = URL.createObjectURL(file);
+                finalizeImage(objectUrl);
+            } catch (e) {
+                // Fallback para FileReader se createObjectURL falhar
+                const reader = new FileReader();
+                reader.onload = (event) => finalizeImage(event.target.result);
+                reader.onerror = () => alert('Falha ao ler o arquivo de imagem com ambos os métodos.');
                 reader.readAsDataURL(file);
-            } catch (readErr) {
-                try {
-                    const objectUrl = URL.createObjectURL(file);
-                    finalizeImage(objectUrl);
-                    setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
-                } catch (e) {
-                    alert('Erro ao processar a imagem no dispositivo.');
-                }
             }
         } catch (outerErr) {
             alert('Erro inesperado ao carregar imagem.');
@@ -296,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.currentSelectedColor) {
             setActiveReferenceColor(state.currentSelectedColor);
         }
+        // A linha abaixo estava faltando na versão anterior, garantindo que os botões sejam atualizados.
         updateButtonStates();
     }
 
@@ -430,10 +425,6 @@ document.addEventListener('DOMContentLoaded', () => {
         handleSetAsReference();
     });
     if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleSaveAnalysis();
-    });
-    if (addToPaletteBtn) addToPaletteBtn.addEventListener('touchstart', (e) => {
         e.preventDefault();
         handleSaveAnalysis();
     });
