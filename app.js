@@ -164,6 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleCanvasClick(e) {
+        // Prevenir comportamento padrão em eventos de toque para evitar rolagem acidental
+        if (e.type === 'touchstart') {
+            e.preventDefault();
+        }
+
         const rect = canvas.getBoundingClientRect();
         const touch = e.touches ? e.touches[0] : null;
         const clientX = touch ? touch.clientX : e.clientX;
@@ -204,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         drawZoomPreview(x, y);
         updateComparisonUI();
+        updateButtonStates();
     }
 
     function handleImageLoad(e) {
@@ -290,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.currentSelectedColor) {
             setActiveReferenceColor(state.currentSelectedColor);
         }
+        updateButtonStates();
     }
 
     function handleAddToPalette() {
@@ -302,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPalette();
                 savePaletteToStorage();
             }
+            updateButtonStates();
         }
     }
 
@@ -333,6 +341,17 @@ document.addEventListener('DOMContentLoaded', () => {
             state.analysisHistory.unshift(newAnalysis);
             saveAnalysisHistoryToStorage();
             renderAnalysisHistory();
+            showTemporaryFeedback(saveAnalysisBtn, 'Análise salva!');
+        }
+    }
+
+    function showTemporaryFeedback(button, message) {
+        const originalText = button.textContent;
+        button.textContent = message;
+        button.disabled = true;
+        setTimeout(() => {
+            button.textContent = originalText;
+            updateButtonStates();
         }
     }
 
@@ -403,6 +422,17 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.addEventListener('touchstart', handleCanvasClick, { passive: true });
     }
     if (setAsRefBtn) setAsRefBtn.addEventListener('click', handleSetAsReference);
+    // Adicionando tratamento para 'touchstart' para melhor responsividade em mobile
+    if (setAsRefBtn) setAsRefBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleSetAsReference();
+    });
+    if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleSaveAnalysis();
+    });
+
+
     if (addToPaletteBtn) addToPaletteBtn.addEventListener('click', handleAddToPalette);
     if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('click', handleSaveAnalysis);
     if (exportExcelBtn) exportExcelBtn.addEventListener('click', handleExportToExcel);
@@ -447,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.activeReferenceColor = color;
         renderPalette();
         updateComparisonUI();
+        updateButtonStates();
     }
 
     function removePaletteItem(color, index) {
@@ -457,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
         savePaletteToStorage();
         renderPalette();
         updateComparisonUI();
+        updateButtonStates();
     }
 
     function renderAnalysisHistory() {
@@ -585,6 +617,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function updateButtonStates() {
+        if (!setAsRefBtn || !addToPaletteBtn || !saveAnalysisBtn) return;
+
+        setAsRefBtn.disabled = !state.currentSelectedColor;
+        addToPaletteBtn.disabled = !state.currentSelectedColor;
+        saveAnalysisBtn.disabled = !(state.currentSelectedColor && state.activeReferenceColor);
+    }
+
     function drawImageOnCanvas(img) {
         try {
             if (!canvas || !ctx) return;
@@ -682,5 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
     checkLocalStorageSupport();
     renderPalette();
     renderAnalysisHistory();
+    updateButtonStates();
     updateComparisonUI();
 });
