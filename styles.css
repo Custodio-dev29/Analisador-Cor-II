@@ -179,7 +179,7 @@ body {
     image-rendering: pixelated;
 }
 
-#add-to-palette-btn, #set-as-ref-btn, #save-analysis-btn, #export-data-btn {
+#add-to-palette-btn, #set-as-ref-btn, #save-analysis-btn, #export-excel-btn {
     width: 200px;
     padding: 0.6rem;
     background-color: var(--fluig-primary);
@@ -191,7 +191,7 @@ body {
     transition: background-color 0.2s;
 }
 
-#add-to-palette-btn:hover, #set-as-ref-btn:hover, #save-analysis-btn:hover, #export-data-btn:hover {
+#add-to-palette-btn:hover, #set-as-ref-btn:hover, #save-analysis-btn:hover, #export-excel-btn:hover {
     background-color: var(--fluig-primary-hover);
 }
 
@@ -230,10 +230,10 @@ body {
 }
 
 .interpretation-badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 3px;
-    font-size: 0.85rem;
+        display: inline-block;
+    padding: 0.1rem 0.1rem;
+    border-radius: 1px;
+    font-size: 0.5rem;
     font-weight: 500;
 }
 
@@ -376,12 +376,12 @@ body {
     width: 100%;
     border-collapse: collapse;
     margin-top: 1rem;
-    font-size: 0.9rem;
+    font-size: 0.7rem;
 }
 
 .analysis-history-table th, .analysis-history-table td {
     border: 1px solid var(--border-color);
-    padding: 8px;
+    padding: 1px;
     text-align: center;
     vertical-align: middle;
 }
@@ -397,9 +397,21 @@ body {
     gap: 8px;
 }
 
+.analysis-history-table .history-color-details {
+    font-family: monospace;
+    font-size: 0.75rem;
+    line-height: 1;
+    text-align: left;
+}
+
+.analysis-history-table .history-color-details small {
+    color: #555;
+    font-size: 0.8em;
+}
+
 .analysis-history-table .history-swatch {
-    width: 20px;
-    height: 20px;
+    width: 10px;
+    height: 40px;
     border: 1px solid var(--swatch-border);
     border-radius: 3px;
     flex-shrink: 0;
@@ -432,6 +444,6 @@ body {
     .info-wrapper {
         flex: 1;
         min-width: 320px;
-        align-items: initial;
+        align-items: stretch;
     }
 }

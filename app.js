@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const setAsRefBtn = document.getElementById('set-as-ref-btn');
     const addToPaletteBtn = document.getElementById('add-to-palette-btn');
     const saveAnalysisBtn = document.getElementById('save-analysis-btn');
-    const exportDataBtn = document.getElementById('export-data-btn');
+    const exportExcelBtn = document.getElementById('export-excel-btn');
     const paletteList = document.getElementById('palette-list');
     const analysisHistoryBody = document.getElementById('analysis-history-body');
     const sampleSizeInput = document.getElementById('sample-size');
@@ -309,11 +309,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const { activeReferenceColor, currentSelectedColor } = state;
         if (activeReferenceColor && currentSelectedColor) {
             const deltaE = calculateDeltaE(currentSelectedColor.lab, activeReferenceColor.lab);
+            const interpretation = interpretDeltaE(deltaE);
+
+            // Salva um "retrato" completo dos dados da tabela comparativa
             const newAnalysis = {
                 refColor: activeReferenceColor,
                 selColor: currentSelectedColor,
                 deltaE: deltaE,
-                timestamp: new Date().toISOString()
+                interpretation: interpretation,
+                timestamp: new Date().toISOString(),
+                // Salva os valores formatados para consistência histórica
+                formatted: {
+                    ref: {
+                        rgb: `(${activeReferenceColor.r}, ${activeReferenceColor.g}, ${activeReferenceColor.b})`,
+                        lab: `L*:${activeReferenceColor.lab.l.toFixed(1)} a*:${activeReferenceColor.lab.a.toFixed(1)} b*:${activeReferenceColor.lab.b.toFixed(1)}`
+                    },
+                    sel: {
+                        rgb: `(${currentSelectedColor.r}, ${currentSelectedColor.g}, ${currentSelectedColor.b})`,
+                        lab: `L*:${currentSelectedColor.lab.l.toFixed(1)} a*:${currentSelectedColor.lab.a.toFixed(1)} b*:${currentSelectedColor.lab.b.toFixed(1)}`
+                    }
+                }
             };
             state.analysisHistory.unshift(newAnalysis);
             saveAnalysisHistoryToStorage();
@@ -321,47 +336,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleExportData() {
+    function handleExportToExcel() {
         if (state.analysisHistory.length === 0) {
             alert('Nenhuma análise para exportar.');
             return;
         }
 
-        const csvHeader = 'Data/Hora,Ref HEX,Ref RGB,Ref Lab L*,Ref Lab a*,Ref Lab b*,Sel HEX,Sel RGB,Sel Lab L*,Sel Lab a*,Sel Lab b*,Delta E,Interpretação\n';
-        
-        const csvRows = state.analysisHistory.map(analysis => {
-            const { refColor, selColor, deltaE, timestamp } = analysis;
-            const interpretation = interpretDeltaE(deltaE).text;
+        const data = state.analysisHistory.map(analysis => {
+            const { refColor, selColor, deltaE, interpretation, timestamp } = analysis;
+            const interpretationText = interpretation ? interpretation.text : interpretDeltaE(deltaE).text;
             const date = new Date(timestamp).toLocaleString('pt-BR');
-            
-            return [
-                date,
-                refColor.hex,
-                `"${refColor.r},${refColor.g},${refColor.b}"`,
-                refColor.lab.l.toFixed(2),
-                refColor.lab.a.toFixed(2),
-                refColor.lab.b.toFixed(2),
-                selColor.hex,
-                `"${selColor.r},${selColor.g},${selColor.b}"`,
-                selColor.lab.l.toFixed(2),
-                selColor.lab.a.toFixed(2),
-                selColor.lab.b.toFixed(2),
-                deltaE.toFixed(2),
-                `"${interpretation}"`
-            ].join(',');
-        }).join('\n');
+            return {
+                'Data/Hora': date,
+                'Ref HEX': refColor.hex,
+                'Ref RGB': `(${refColor.r},${refColor.g},${refColor.b})`,
+                'Ref L*': refColor.lab.l.toFixed(2),
+                'Ref a*': refColor.lab.a.toFixed(2),
+                'Ref b*': refColor.lab.b.toFixed(2),
+                'Sel HEX': selColor.hex,
+                'Sel RGB': `(${selColor.r},${selColor.g},${selColor.b})`,
+                'Sel L*': selColor.lab.l.toFixed(2),
+                'Sel a*': selColor.lab.a.toFixed(2),
+                'Sel b*': selColor.lab.b.toFixed(2),
+                'Delta E': deltaE.toFixed(2),
+                'Interpretação': interpretationText,
+            };
+        });
 
-        const csvContent = csvHeader + csvRows;
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute('href', url);
-        link.setAttribute('download', `analise_cores_${new Date().toISOString().slice(0,10)}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const fileName = `analise_cores_${new Date().toISOString().slice(0,10)}`;
+        if (typeof XLSX === 'undefined') {
+            alert('A biblioteca de exportação para Excel (SheetJS) não foi carregada.');
+            return;
+        }
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Análises');
+        XLSX.writeFile(workbook, `${fileName}.xlsx`);
     }
 
     function handleSampleSizeChange() {
@@ -395,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (setAsRefBtn) setAsRefBtn.addEventListener('click', handleSetAsReference);
     if (addToPaletteBtn) addToPaletteBtn.addEventListener('click', handleAddToPalette);
     if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('click', handleSaveAnalysis);
-    if (exportDataBtn) exportDataBtn.addEventListener('click', handleExportData);
+    if (exportExcelBtn) exportExcelBtn.addEventListener('click', handleExportToExcel);
     if (sampleSizeInput) sampleSizeInput.addEventListener('input', handleSampleSizeChange);
 
     function renderPalette() {
@@ -456,16 +466,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const fragment = document.createDocumentFragment();
 
         state.analysisHistory.forEach((analysis, index) => {
-            const { refColor, selColor, deltaE } = analysis;
-            const interpretation = interpretDeltaE(deltaE);
+            const { refColor, selColor, deltaE, interpretation } = analysis;
+            const finalInterpretation = interpretation || interpretDeltaE(deltaE); // Fallback para dados antigos
 
             const row = document.createElement('tr');
 
             // Células de Cor (Ref e Sel)
             [refColor, selColor].forEach(color => {
                 const cell = document.createElement('td'); 
-                cell.setAttribute('data-label', color === refColor ? 'Cor de Referência' : 'Cor Analisada');
-                cell.innerHTML = `<div class="color-cell"><div class="history-swatch" style="background-color: ${color.hex};"></div><span>${color.hex.toUpperCase()}</span></div>`;
+                const dataLabel = color === refColor ? 'Cor de Referência' : 'Cor Analisada';
+                cell.setAttribute('data-label', dataLabel);
+
+                const formattedValues = analysis.formatted ? (color === refColor ? analysis.formatted.ref : analysis.formatted.sel) : null;
+
+                cell.innerHTML = `
+                    <div class="color-cell">
+                        <div class="history-swatch" style="background-color: ${color.hex};"></div>
+                        <div class="history-color-details">${color.hex.toUpperCase()}<br><small>${formattedValues ? formattedValues.rgb : ''}<br>${formattedValues ? formattedValues.lab : ''}</small></div>
+                    </div>`;
                 row.appendChild(cell);
             });
 
@@ -478,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Célula Interpretação
             const interpretationCell = document.createElement('td');
             interpretationCell.setAttribute('data-label', 'Interpretação');
-            interpretationCell.innerHTML = `<span class="interpretation-badge ${interpretation.class}">${interpretation.text}</span>`;
+            interpretationCell.innerHTML = `<span class="interpretation-badge ${finalInterpretation.class}">${finalInterpretation.text}</span>`;
             row.appendChild(interpretationCell);
 
             // Célula Ação
