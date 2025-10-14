@@ -629,6 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const paletteData = JSON.stringify(state.referencePalette);
             window.localStorage.setItem(PALETTE_STORAGE_KEY, paletteData);
         } catch (e) {
+            alert("Não foi possível salvar a paleta de cores. Verifique as permissões de armazenamento do navegador.");
             console.error("Falha ao salvar a paleta:", e);
         }
     }
@@ -648,6 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const historyData = JSON.stringify(state.analysisHistory);
             window.localStorage.setItem(ANALYSIS_HISTORY_KEY, historyData);
         } catch (e) {
+            alert("Não foi possível salvar a análise. Verifique as permissões de armazenamento do navegador.");
             console.error("Falha ao salvar o histórico:", e);
         }
     }
@@ -662,7 +664,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Inicialização
+    // Checagem de suporte ao localStorage
+    function checkLocalStorageSupport() {
+        let supported = true;
+        try {
+            const testKey = '__test_localstorage__';
+            window.localStorage.setItem(testKey, '1');
+            window.localStorage.removeItem(testKey);
+        } catch (e) {
+            supported = false;
+        }
+        if (!supported) {
+            alert('Atenção: O armazenamento local do navegador não está disponível. As análises e paletas não serão salvas. Verifique as permissões do navegador ou tente outro navegador.');
+        }
+    }
+
+    checkLocalStorageSupport();
     renderPalette();
     renderAnalysisHistory();
     updateComparisonUI();
