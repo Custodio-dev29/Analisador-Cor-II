@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Análises - Analisador de Cores</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="main-container">
+        <h1>Histórico de Análises</h1>
+        <section class="controls">
+            <a href="index.html" class="control-btn">Voltar ao Analisador</a>
+            <button class="control-btn" id="export-excel-btn">Exportar para Excel</button>
+        </section>
+
+        <section class="analysis-history-container">
+            <table class="analysis-history-table">
+                <caption>Histórico de análises de cores salvas</caption>
+                <thead>
+                    <tr>
+                        <th>ID / Nome da Amostra</th>
+                        <th>Cor de Referência</th>
+                        <th>Cor Analisada</th>
+                        <th>Dif. (ΔE)</th>
+                        <th>Interp.</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="analysis-history-body"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <!-- Biblioteca para exportação Excel -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="history.js" defer></script>
+</body>
+</html>

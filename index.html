@@ -3,17 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analisador de Cores de Imagem</title>
+    <title>Analisador de Cores</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <main class="main-container">
-        <h1>Analisador de Cores de Imagem</h1>
+        <h1>Analisador de Cores</h1>
         
-        <section class="warning-banner">
-            ⚠️ <strong>Importante:</strong> A precisão da análise depende da calibração do seu monitor e das condições de iluminação ao capturar fotos. Para melhores resultados, use iluminação uniforme e neutra.
-        </section>
-
         <section class="controls">
             <label class="control-btn file-label" for="image-uploader">Carregar Imagem
                 <input type="file" id="image-uploader" accept="image/*" aria-hidden="true">
@@ -21,7 +17,8 @@
             <label class="control-btn file-label" for="image-capturer">Tirar Foto
                 <input type="file" id="image-capturer" accept="image/*" capture="environment" aria-hidden="true">
             </label>
-            <button class="control-btn" id="export-excel-btn">Exportar para Excel</button>
+            <a href="history.html" class="control-btn">Ver Histórico</a>
+
         </section>
 
         <section class="settings-panel">
@@ -37,11 +34,28 @@
                 <canvas id="image-canvas" tabindex="0" aria-label="Área da imagem para análise de cor"></canvas>
                 <div id="image-click-marker" aria-hidden="true"></div>
                 <div class="zoom-preview">
-                    <p style="margin: 0.5rem 0; font-size: 0.9rem;">Área Ampliada:</p>
-                    <canvas id="zoom-canvas" class="zoom-canvas" width="100" height="100"></canvas>
+                    <div>
+                        <p style="margin: 0.5rem 0; font-size: 0.9rem;">Área Ampliada:</p>
+                         <canvas id="zoom-canvas" class="zoom-canvas" width="100" height="100"></canvas>
+                    </div>
+                    <div>
+                        <button id="set-as-ref-btn">Definir como Referência</button>
+                        <button id="add-to-palette-btn">Adicionar à Paleta</button>
+                    </div>
                 </div>
+                
             </div>
+            
             <div class="info-wrapper">
+                <div class="analysis-name-wrapper">
+                    <label for="analysis-name">Nome da Amostra:</label>
+                    <input type="text" id="analysis-name" placeholder="Digite um nome...">
+                    <section class="palette-container">
+                    <h3>Paleta de Referência</h3>
+                    <div id="palette-list"></div>
+                    </section>
+                </div> 
+
                 <table class="comparison-table">
                     <caption>Tabela comparativa entre a cor de referência e a cor selecionada</caption>
                     <thead>
@@ -65,14 +79,9 @@
                         <tr id="interpretation-row"><td>Interpretação</td><td colspan="2">-</td></tr>
                     </tbody>
                 </table>
-                <button id="set-as-ref-btn">Definir como Referência</button>
-                <button id="add-to-palette-btn">Adicionar à Paleta</button>
                 <button id="save-analysis-btn">Salvar Análise</button>
             </div>
-            <section class="palette-container">
-                <h3>Paleta de Referência</h3>
-                <div id="palette-list"></div>
-            </section>
+            
         </div>
 
         <section class="color-ruler-container">
@@ -89,28 +98,8 @@
             </div>
         </section>
 
-        <section class="analysis-history-container">
-            <h3>Histórico de Análises</h3>
-            <table class="analysis-history-table">
-                <caption>Histórico de análises de cores salvas</caption>
-                <thead>
-                    <tr>
-                        <th>Cor de Referência</th>
-                        <th>Cor Analisada</th>
-                        <th>Dif. (ΔE)</th>
-                        <th>Interp.</th>
-                        <th>Ação</th>
-                    </tr>
-                </thead>
-                <tbody id="analysis-history-body"></tbody>
-            </table>
-        </section>
-    </main>
 
-    <!-- Bibliotecas para exportação -->
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/jspdf-autotable@latest/dist/jspdf.autotable.min.js"></script>
+    </main>
 
     <script src="app.js" defer></script>
 </body>
