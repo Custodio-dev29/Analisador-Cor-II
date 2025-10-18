@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const PALETTE_STORAGE_KEY = 'colorAnalyzerPalette';
     const ANALYSIS_NAME_KEY = 'colorAnalysisName';
     const canvas = document.getElementById('image-canvas');
     const ctx = canvas && canvas.getContext ? canvas.getContext('2d', { willReadFrequently: true }) : null;    const zoomCanvas = document.getElementById('zoom-canvas');
@@ -290,8 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
             );
             if (!isAlreadyInPalette) {
                 state.referencePalette.push(state.currentSelectedColor);
+                savePaletteToStorage(state.referencePalette);
                 renderPalette();
-                savePaletteToStorage();
             }
             updateButtonStates();
         }
@@ -443,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.activeReferenceColor = null;
         }
         state.referencePalette.splice(index, 1);
-        savePaletteToStorage();
+        savePaletteToStorage(state.referencePalette);
         renderPalette();
         updateComparisonUI();
         updateButtonStates();
@@ -554,26 +553,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.textAlign = 'center';
             ctx.fillText('Erro ao carregar imagem', canvas.width/2, canvas.height/2);
             throw err;
-        }
-    }
-
-    function savePaletteToStorage() {
-        try {
-            const paletteData = JSON.stringify(state.referencePalette);
-            window.localStorage.setItem(PALETTE_STORAGE_KEY, paletteData);
-        } catch (e) {
-            alert("Não foi possível salvar a paleta de cores. Verifique as permissões de armazenamento do navegador.");
-            console.error("Falha ao salvar a paleta:", e);
-        }
-    }
-
-    function loadPaletteFromStorage() {
-        try {
-            const savedPalette = window.localStorage.getItem(PALETTE_STORAGE_KEY);
-            return savedPalette ? JSON.parse(savedPalette) : [];
-        } catch (e) {
-            console.error("Falha ao carregar a paleta:", e);
-            return [];
         }
     }
 

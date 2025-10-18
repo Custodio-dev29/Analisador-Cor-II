@@ -65,6 +65,14 @@ body {
     background-color: var(--fluig-secondary-hover);
 }
 
+.controls .danger-btn {
+    background-color: var(--danger-color);
+}
+
+.controls .danger-btn:hover {
+    background-color: #c9302c; /* Um vermelho mais escuro */
+}
+
 .file-label {
     display: inline-block;
     position: relative;

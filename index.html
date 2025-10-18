@@ -24,6 +24,7 @@
                 <input type="file" id="image-capturer" accept="image/*" capture="environment" aria-hidden="true">
             </label>
             <a href="history.html" class="control-btn">Ver Histórico</a>
+            <button id="logout-btn" class="control-btn danger-btn">Sair</button>
 
         </section>
 
@@ -109,5 +110,13 @@
 
     <script src="shared.js" defer></script>
     <script src="app.js" defer></script>
+    <script>
+        // Lógica de Logout
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            sessionStorage.removeItem('isLoggedIn');
+            sessionStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        });
+    </script>
 </body>
 </html>
