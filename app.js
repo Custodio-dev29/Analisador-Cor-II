@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const PALETTE_STORAGE_KEY = 'colorAnalyzerPalette';
-    const ANALYSIS_HISTORY_KEY = 'colorAnalysisHistory';
     const ANALYSIS_NAME_KEY = 'colorAnalysisName';
     const canvas = document.getElementById('image-canvas');
-    const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
-    const zoomCanvas = document.getElementById('zoom-canvas');
+    const ctx = canvas && canvas.getContext ? canvas.getContext('2d', { willReadFrequently: true }) : null;    const zoomCanvas = document.getElementById('zoom-canvas');
     const zoomCtx = zoomCanvas ? zoomCanvas.getContext('2d') : null;
     const imageUploader = document.getElementById('image-uploader');
     const imageCapturer = document.getElementById('image-capturer');
@@ -84,15 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const deltaA = lab1.a - lab2.a;
         const deltaB = lab1.b - lab2.b;
         return Math.sqrt(deltaL * deltaL + deltaA * deltaA + deltaB * deltaB);
-    }
-
-    function interpretDeltaE(deltaE) {
-        if (deltaE < 1) return { text: "Diferença imperceptível", class: "badge-imperceptible" };
-        if (deltaE < 2) return { text: "Diferença apenas perceptível", class: "badge-slight" };
-        if (deltaE < 3.5) return { text: "Diferença perceptível (observador treinado)", class: "badge-noticeable" };
-        if (deltaE < 5) return { text: "Diferença claramente perceptível", class: "badge-clear" };
-        if (deltaE < 10) return { text: "Diferença significativa", class: "badge-significant" };
-        return { text: "Cores muito diferentes", class: "badge-very-different" };
     }
 
     function rgbToHex(r, g, b) {
@@ -290,9 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSetAsReference() {
         if (state.currentSelectedColor) {
             setActiveReferenceColor(state.currentSelectedColor);
+            updateButtonStates();
         }
-        // A linha abaixo estava faltando na versão anterior, garantindo que os botões sejam atualizados.
-        updateButtonStates();
     }
 
     function handleAddToPalette() {
@@ -342,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
             state.analysisHistory.unshift(newAnalysis);
-            saveAnalysisHistoryToStorage();
+            saveAnalysisHistoryToStorage(state.analysisHistory);
             showTemporaryFeedback(saveAnalysisBtn, 'Análise salva!');
         }
     }
@@ -589,26 +577,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function saveAnalysisHistoryToStorage() {
-        try {
-            const historyData = JSON.stringify(state.analysisHistory);
-            window.localStorage.setItem(ANALYSIS_HISTORY_KEY, historyData);
-        } catch (e) {
-            alert("Não foi possível salvar a análise. Verifique as permissões de armazenamento do navegador.");
-            console.error("Falha ao salvar o histórico:", e);
-        }
-    }
-
-    function loadAnalysisHistoryFromStorage() {
-        try {
-            const savedHistory = window.localStorage.getItem(ANALYSIS_HISTORY_KEY);
-            return savedHistory ? JSON.parse(savedHistory) : [];
-        } catch (e) {
-            console.error("Falha ao carregar o histórico:", e);
-            return [];
-        }
-    }
-
     function saveAnalysisNameToStorage() {
         try {
             window.localStorage.setItem(ANALYSIS_NAME_KEY, analysisNameInput.value);
@@ -648,4 +616,17 @@ document.addEventListener('DOMContentLoaded', () => {
     updateButtonStates();
     updateComparisonUI();
     loadAnalysisNameFromStorage();
+
+    // --- Registro do Service Worker para PWA ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker registrado com sucesso:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Falha no registro do Service Worker:', error);
+                });
+        });
+    }
 });

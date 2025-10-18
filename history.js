@@ -1,42 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const ANALYSIS_HISTORY_KEY = 'colorAnalysisHistory';
     const analysisHistoryBody = document.getElementById('analysis-history-body');
     const exportExcelBtn = document.getElementById('export-excel-btn');
 
     let state = {
         analysisHistory: loadAnalysisHistoryFromStorage(),
     };
-
-    function loadAnalysisHistoryFromStorage() {
-        try {
-            const savedHistory = window.localStorage.getItem(ANALYSIS_HISTORY_KEY);
-            // Sort by timestamp descending (newest first)
-            const history = savedHistory ? JSON.parse(savedHistory) : [];
-            return history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        } catch (e) {
-            console.error("Falha ao carregar o histórico:", e);
-            return [];
-        }
-    }
-
-    function saveAnalysisHistoryToStorage() {
-        try {
-            const historyData = JSON.stringify(state.analysisHistory);
-            window.localStorage.setItem(ANALYSIS_HISTORY_KEY, historyData);
-        } catch (e) {
-            alert("Não foi possível salvar a análise. Verifique as permissões de armazenamento do navegador.");
-            console.error("Falha ao salvar o histórico:", e);
-        }
-    }
-
-    function interpretDeltaE(deltaE) {
-        if (deltaE < 1) return { text: "Diferença imperceptível", class: "badge-imperceptible" };
-        if (deltaE < 2) return { text: "Diferença apenas perceptível", class: "badge-slight" };
-        if (deltaE < 3.5) return { text: "Diferença perceptível (observador treinado)", class: "badge-noticeable" };
-        if (deltaE < 5) return { text: "Diferença claramente perceptível", class: "badge-clear" };
-        if (deltaE < 10) return { text: "Diferença significativa", class: "badge-significant" };
-        return { text: "Cores muito diferentes", class: "badge-very-different" };
-    }
 
     function renderAnalysisHistory() {
         if (!analysisHistoryBody) return;
@@ -53,10 +21,20 @@ document.addEventListener('DOMContentLoaded', () => {
             // Célula de ID e Nome
             const idCell = document.createElement('td');
             idCell.setAttribute('data-label', 'ID / Nome da Amostra');
-            const date = new Date(timestamp).toLocaleString('pt-BR');
-            idCell.innerHTML = `<div class="id-cell"><b>${name || 'Sem nome'}</b><br><small>${id || date}</small></div>`;
-            row.appendChild(idCell);
 
+            // Correção de segurança: Criar elementos em vez de usar innerHTML
+            const idCellDiv = document.createElement('div');
+            idCellDiv.className = 'id-cell';
+            const nameElement = document.createElement('b');
+            nameElement.textContent = name || 'Sem nome'; // Usa textContent para evitar XSS
+            const dateElement = document.createElement('small');
+            dateElement.textContent = id || new Date(timestamp).toLocaleString('pt-BR');
+
+            idCellDiv.appendChild(nameElement);
+            idCellDiv.appendChild(document.createElement('br'));
+            idCellDiv.appendChild(dateElement);
+            idCell.appendChild(idCellDiv);
+            row.appendChild(idCell);
 
             // Células de Cor (Ref e Sel)
             [refColor, selColor].forEach(color => {
@@ -72,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="history-color-details">${color.hex.toUpperCase()}<br><small>${formattedValues ? formattedValues.rgb : ''}<br>${formattedValues ? formattedValues.lab : ''}</small></div>
                     </div>`;
                 row.appendChild(cell);
+                
             });
 
             // Célula Delta E
@@ -109,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function removeAnalysisHistoryItem(index) {
         state.analysisHistory.splice(index, 1);
-        saveAnalysisHistoryToStorage();
+        saveAnalysisHistoryToStorage(state.analysisHistory);
         renderAnalysisHistory();
     }
 

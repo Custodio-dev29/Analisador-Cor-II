@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <script>
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analisador de Cores</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
     <main class="main-container">
@@ -50,11 +56,11 @@
                 <div class="analysis-name-wrapper">
                     <label for="analysis-name">Nome da Amostra:</label>
                     <input type="text" id="analysis-name" placeholder="Digite um nome...">
-                    <section class="palette-container">
+                </div> 
+                <section class="palette-container">
                     <h3>Paleta de Referência</h3>
                     <div id="palette-list"></div>
-                    </section>
-                </div> 
+                </section>
 
                 <table class="comparison-table">
                     <caption>Tabela comparativa entre a cor de referência e a cor selecionada</caption>
@@ -101,6 +107,7 @@
 
     </main>
 
+    <script src="shared.js" defer></script>
     <script src="app.js" defer></script>
 </body>
 </html>

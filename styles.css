@@ -394,7 +394,6 @@ body {
 .analysis-history-table .color-cell {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 8px;
 }
 
@@ -428,6 +427,78 @@ body {
 
 .analysis-history-table .remove-history-btn:hover {
     color: var(--danger-color);
+}
+
+/* --- Estilos da Página de Autenticação --- */
+.auth-container {
+    max-width: 400px;
+    margin: 5vh auto;
+    padding: 2rem;
+}
+
+.auth-form {
+    display: none; /* Escondido por padrão */
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    text-align: left;
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+}
+
+.auth-form.active-form {
+    display: flex; /* Mostra o formulário ativo */
+    opacity: 1;
+}
+
+.auth-form h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: var(--color-text);
+}
+.auth-form p {
+    text-align: center;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.form-group input {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--fluig-primary);
+    box-shadow: 0 0 0 3px rgba(50, 144, 210, 0.2);
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+}
+
+.form-links {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
 }
 
 @media (min-width: 992px) {

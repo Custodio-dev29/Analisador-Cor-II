@@ -1,10 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <script>
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Histórico de Análises - Analisador de Cores</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
     <main class="main-container">
@@ -33,7 +39,12 @@
     </main>
 
     <!-- Biblioteca para exportação Excel -->
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script 
+        src="https://unpkg.com/xlsx/dist/xlsx.full.min.js" 
+        integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+        crossorigin="anonymous"
+    ></script>
+    <script src="shared.js" defer></script>
     <script src="history.js" defer></script>
 </body>
 </html>
