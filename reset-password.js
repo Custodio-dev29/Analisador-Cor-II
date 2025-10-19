@@ -11,19 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!email || !token) {
         messageElement.textContent = 'Link de recuperação inválido ou expirado.';
+        messageElement.style.color = 'var(--danger-color)';
         resetForm.style.display = 'none';
         return;
-    }
-
-    // ATENÇÃO: Esta é uma função de hash insegura, apenas para demonstração.
-    function simpleHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash |= 0; // Converte para um inteiro de 32bit
-        }
-        return hash.toString();
     }
 
     resetForm.addEventListener('submit', (e) => {
@@ -48,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Valida o token e se não expirou (ex: 15 minutos)
         if (user && user.resetToken === token && user.resetTokenExpiry > Date.now()) {
             // Atualiza a senha
-            user.passwordHash = simpleHash(newPassword);
+            user.passwordHash = simpleHash(newPassword); // simpleHash está em shared.js
             // Remove o token para que não possa ser reutilizado
             delete user.resetToken;
             delete user.resetTokenExpiry;

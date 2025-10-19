@@ -12,20 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const USERS_DB_KEY = 'colorAnalyzerUsers';
 
-    // --- Funções de Gerenciamento de Usuário (Simulado) ---
-
-    // ATENÇÃO: Esta é uma função de hash insegura, apenas para demonstração.
-    // Em um ambiente real, use bibliotecas criptográficas robustas (ex: bcrypt) no backend.
-    function simpleHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash |= 0; // Converte para um inteiro de 32bit
-        }
-        return hash.toString();
-    }
-
     // --- Lógica de Navegação dos Formulários ---
 
     function showForm(formToShow) {
@@ -99,7 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
             name: name,
             passwordHash: simpleHash(password),
             analysisHistory: [],
-            referencePalette: []
+            referencePalette: [],
+            analysisName: '' // Adiciona o campo para o novo usuário
         };
 
         localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
@@ -117,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const users = JSON.parse(localStorage.getItem(USERS_DB_KEY)) || {};
+        // Apenas prossiga se o usuário existir
         if (users[email]) {
             // Gera um token simples e um tempo de expiração (15 minutos)
             const token = Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -126,13 +114,16 @@ document.addEventListener('DOMContentLoaded', () => {
             users[email].resetTokenExpiry = expiry;
 
             localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-
-            // Simula o envio de e-mail mostrando o link para o usuário
+            
+            // SIMULAÇÃO: Em uma aplicação real, você enviaria um e-mail.
+            // Aqui, exibimos o link em um alerta para fins de teste.
             const recoveryLink = `${window.location.origin}${window.location.pathname.replace('login.html', '')}reset-password.html?email=${encodeURIComponent(email)}&token=${token}`;
-            alert(`Link de recuperação (simulado):\n\n${recoveryLink}\n\nEm uma aplicação real, este link seria enviado para o seu e-mail.`);
-        } else {
-            alert('Se o e-mail estiver cadastrado, um link de recuperação foi enviado.');
+            // Em um ambiente de desenvolvimento, é útil ver o link no console.
+            console.log('Link de recuperação gerado:', recoveryLink);
         }
+
+        // Mostra uma mensagem genérica por segurança, não revelando se o e-mail existe ou não.
+        alert('Se o e-mail estiver cadastrado, um link de recuperação foi enviado.');
         showForm(loginForm);
     });
 });

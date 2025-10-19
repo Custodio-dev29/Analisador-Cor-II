@@ -1,5 +1,17 @@
 const USERS_DB_KEY = 'colorAnalyzerUsers';
 
+// ATENÇÃO: Esta é uma função de hash insegura, apenas para demonstração.
+// Em um ambiente real, use bibliotecas criptográficas robustas (ex: bcrypt) no backend.
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Converte para um inteiro de 32bit
+    }
+    return hash.toString();
+}
+
 function getCurrentUserEmail() {
     return sessionStorage.getItem('currentUser');
 }
@@ -60,6 +72,28 @@ function savePaletteToStorage(newPalette) {
     if (userData) {
         userData.referencePalette = newPalette;
         saveUserData(userData);
+    }
+}
+
+function saveAnalysisNameToStorage(name) {
+    try {
+        const userData = getUserData();
+        if (userData) {
+            userData.analysisName = name;
+            saveUserData(userData);
+        }
+    } catch (e) {
+        console.error("Falha ao salvar o nome da análise:", e);
+    }
+}
+
+function loadAnalysisNameFromStorage() {
+    try {
+        const userData = getUserData();
+        return userData ? userData.analysisName || '' : '';
+    } catch (e) {
+        console.error("Falha ao carregar o nome da análise:", e);
+        return '';
     }
 }
 

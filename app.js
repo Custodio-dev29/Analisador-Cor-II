@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const ANALYSIS_NAME_KEY = 'colorAnalysisName';
     const canvas = document.getElementById('image-canvas');
     const ctx = canvas && canvas.getContext ? canvas.getContext('2d', { willReadFrequently: true }) : null;    const zoomCanvas = document.getElementById('zoom-canvas');
     const zoomCtx = zoomCanvas ? zoomCanvas.getContext('2d') : null;
@@ -163,11 +162,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientX = touch ? touch.clientX : e.clientX;
         const clientY = touch ? touch.clientY : e.clientY;
 
-        const relativeX = (clientX - rect.left) / rect.width;
-        const relativeY = (clientY - rect.top) / rect.height;
+        // Correção: Calcula a posição relativa ao tamanho real do canvas, não ao tamanho do elemento DOM.
+        // Isso corrige o problema de mapeamento em imagens com proporções diferentes (ex: retrato).
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
 
-        let x = Math.floor(relativeX * canvas.width);
-        let y = Math.floor(relativeY * canvas.height);
+        let x = Math.floor((clientX - rect.left) * scaleX);
+        let y = Math.floor((clientY - rect.top) * scaleY);
 
         x = Math.max(0, Math.min(canvas.width - 1, x));
         y = Math.max(0, Math.min(canvas.height - 1, y));
@@ -189,10 +190,17 @@ document.addEventListener('DOMContentLoaded', () => {
         state.currentSelectedColor = selectedColor;
 
         if (imageClickMarker) {
-            const markerX = clientX - rect.left;
-            const markerY = clientY - rect.top;
-            imageClickMarker.style.left = `${markerX}px`;
-            imageClickMarker.style.top = `${markerY}px`;
+            // Calcula a posição do clique relativa ao elemento canvas
+            const clickXInCanvas = clientX - rect.left;
+            const clickYInCanvas = clientY - rect.top;
+
+            // A posição do marcador é relativa ao .canvas-wrapper.
+            // Precisamos adicionar o deslocamento (offset) do canvas dentro do wrapper.
+            const markerLeft = canvas.offsetLeft + clickXInCanvas;
+            const markerTop = canvas.offsetTop + clickYInCanvas;
+
+            imageClickMarker.style.left = `${markerLeft}px`;
+            imageClickMarker.style.top = `${markerTop}px`;
             imageClickMarker.style.visibility = 'visible';
         }
 
@@ -393,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('click', handleSaveAnalysis);
     if (sampleSizeInput) sampleSizeInput.addEventListener('input', handleSampleSizeChange);
-    if (analysisNameInput) analysisNameInput.addEventListener('input', saveAnalysisNameToStorage);
+    if (analysisNameInput) analysisNameInput.addEventListener('input', () => saveAnalysisNameToStorage(analysisNameInput.value));
 
     function renderPalette() {
         if (!paletteList) return;
@@ -556,25 +564,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function saveAnalysisNameToStorage() {
-        try {
-            window.localStorage.setItem(ANALYSIS_NAME_KEY, analysisNameInput.value);
-        } catch (e) {
-            console.error("Falha ao salvar o nome da análise:", e);
-        }
-    }
-
-    function loadAnalysisNameFromStorage() {
-        try {
-            const savedName = window.localStorage.getItem(ANALYSIS_NAME_KEY);
-            if (savedName) {
-                analysisNameInput.value = savedName;
-            }
-        } catch (e) {
-            console.error("Falha ao carregar o nome da análise:", e);
-        }
-    }
-
     // Checagem de suporte ao localStorage
     function checkLocalStorageSupport() {
         let supported = true;
@@ -594,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPalette();
     updateButtonStates();
     updateComparisonUI();
-    loadAnalysisNameFromStorage();
+    analysisNameInput.value = loadAnalysisNameFromStorage();
 
     // --- Registro do Service Worker para PWA ---
     if ('serviceWorker' in navigator) {
