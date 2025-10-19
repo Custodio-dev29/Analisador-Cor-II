@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorMarker = document.getElementById('color-marker');
     const refColorMarker = document.getElementById('ref-color-marker');
     const colorRuler = document.getElementById('color-ruler');
+    const colorRulerRef = document.getElementById('color-ruler-ref');
+    const refColorMarker2 = document.getElementById('ref-color-marker-2');
+    const selColorMarker2 = document.getElementById('sel-color-marker-2');
 
     let state = {
         originalImage: null,
@@ -443,6 +446,43 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPalette();
         updateComparisonUI();
         updateButtonStates();
+        updateRefColorRuler(color);
+    }
+
+    function updateRefColorRuler(color) {
+        if (!color || !colorRulerRef) return;
+
+        const r = color.r, g = color.g, b = color.b;
+        const steps = 10; // Número de variações para um gradiente suave
+        const gradientStops = [];
+
+        // Criar variações da cor, mantendo o matiz mas alterando a luminosidade
+        for (let i = 0; i <= steps; i++) {
+            const factor = i / steps; // 0 = mais escuro, 1 = mais claro
+            
+            // Para escurecer: multiplicamos os componentes RGB por um fator < 1
+            // Para clarear: interpolamos em direção ao branco (255)
+            let newR, newG, newB;
+            if (factor <= 0.5) {
+                // Parte mais escura (0% a 50%)
+                const darkFactor = factor * 2; // converte 0-0.5 para 0-1
+                newR = Math.round(r * darkFactor);
+                newG = Math.round(g * darkFactor);
+                newB = Math.round(b * darkFactor);
+            } else {
+                // Parte mais clara (50% a 100%)
+                const lightFactor = (factor - 0.5) * 2; // converte 0.5-1 para 0-1
+                newR = Math.round(r + (255 - r) * lightFactor);
+                newG = Math.round(g + (255 - g) * lightFactor);
+                newB = Math.round(b + (255 - b) * lightFactor);
+            }
+
+            // Adicionar ao gradiente
+            gradientStops.push(`rgb(${newR}, ${newG}, ${newB}) ${factor * 100}%`);
+        }
+
+        // Aplicar o gradiente com todas as variações
+        colorRulerRef.style.background = `linear-gradient(to right, ${gradientStops.join(', ')})`;
     }
 
     function removePaletteItem(color, index) {
@@ -462,6 +502,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const refColor = state.activeReferenceColor;
         const selColor = state.currentSelectedColor;
 
+        // Atualizar o gradiente da régua de referência e marcadores
+        if (refColor) {
+            updateRefColorRuler(refColor);
+            
+            // Mostrar marcador de referência no centro
+            if (refColorMarker2) {
+                refColorMarker2.style.left = '50%';
+                refColorMarker2.style.visibility = 'visible';
+            }
+
+            // Atualizar posição do marcador da cor selecionada
+            if (selColor && selColorMarker2) {
+                // Calcular a posição relativa baseada no brilho
+                const brightnessSel = (selColor.r * 0.299 + selColor.g * 0.587 + selColor.b * 0.114) / 255;
+                const brightnessRef = (refColor.r * 0.299 + refColor.g * 0.587 + refColor.b * 0.114) / 255;
+                
+                // Posição percentual com base na diferença de brilho
+                let position;
+                if (brightnessSel < brightnessRef) {
+                    // Mais escuro que a referência (0% a 50%)
+                    position = (brightnessSel / brightnessRef) * 50;
+                } else {
+                    // Mais claro que a referência (50% a 100%)
+                    position = 50 + ((brightnessSel - brightnessRef) / (1 - brightnessRef)) * 50;
+                }
+
+                position = Math.max(0, Math.min(100, position)); // Garantir que fique entre 0% e 100%
+                selColorMarker2.style.left = `${position}%`;
+                selColorMarker2.style.visibility = 'visible';
+            } else if (selColorMarker2) {
+                selColorMarker2.style.visibility = 'hidden';
+            }
+        } else {
+            // Resetar o gradiente e marcadores quando não houver cor de referência
+            if (colorRulerRef) {
+                colorRulerRef.style.background = 'linear-gradient(to right, #000000, #808080, #ffffff)';
+            }
+            if (refColorMarker2) {
+                refColorMarker2.style.visibility = 'hidden';
+            }
+            if (selColorMarker2) {
+                selColorMarker2.style.visibility = 'hidden';
+            }
+        }
+
         const refHexCell = hexRow.cells[1], selHexCell = hexRow.cells[2];
         const refRgbCell = rgbRow.cells[1], selRgbCell = rgbRow.cells[2];
         const refLabCell = labRow.cells[1], selLabCell = labRow.cells[2];
@@ -479,6 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
             refColorMarker.style.visibility = 'visible';
             
             if (colorRuler) colorRuler.style.background = `linear-gradient(to right, #000000 0%, #808080 50%, #ffffff 100%)`;
+            if (colorRulerRef) colorRulerRef.style.background = refColor.hex;
         } else {
             refColorPreview.style.backgroundColor = '#f0f0f0';
             refHexCell.textContent = '-';
@@ -487,6 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
             refLightnessCell.textContent = '-';
             refColorMarker.style.visibility = 'hidden';
             if (colorRuler) colorRuler.style.background = 'linear-gradient(to right, #000000, #808080, #ffffff)';
+            if (colorRulerRef) colorRulerRef.style.background = '#f0f0f0';
         }
 
         if (selColor) {
