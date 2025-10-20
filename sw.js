@@ -1,14 +1,14 @@
-const CACHE_NAME = 'color-analyzer-v3'; // Incremente a versão para forçar a atualização
+const CACHE_NAME = 'color-analyzer-v5'; // Incremente a versão para forçar a atualização
 const urlsToCache = [
     'index.html',
     'login.html',
     'history.html',
-    'reset-password.html',
+    'profile.html',
     'styles.css',
     'app.js',
     'history.js',
-    'reset-password.js',
     'login.js',
+    'profile.js',
     'shared.js',
     'manifest.json',
     'icons/icon-192x192.png',

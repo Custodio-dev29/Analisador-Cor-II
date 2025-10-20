@@ -1,14 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
-    const loginEmailInput = document.getElementById('login-email');
+    const loginUsernameInput = document.getElementById('login-username');
     const loginPasswordInput = document.getElementById('login-password');
     const registerForm = document.getElementById('register-form');
     const forgotPasswordForm = document.getElementById('forgot-password-form');
+    const masterResetForm = document.getElementById('master-reset-form');
 
     const showRegisterLink = document.getElementById('show-register');
     const showLoginFromRegisterLink = document.getElementById('show-login-from-register');
     const showForgotPasswordLink = document.getElementById('show-forgot-password');
     const showLoginFromForgotLink = document.getElementById('show-login-from-forgot');
+    const showLoginFromMasterResetLink = document.getElementById('show-login-from-master-reset');
 
     const USERS_DB_KEY = 'colorAnalyzerUsers';
 
@@ -16,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showForm(formToShow) {
         // Esconde todos os formulários
-        [loginForm, registerForm, forgotPasswordForm].forEach(form => {
+        [loginForm, registerForm, forgotPasswordForm, masterResetForm].forEach(form => {
             form.classList.remove('active-form');
         });
         // Mostra o formulário alvo
@@ -43,87 +45,114 @@ document.addEventListener('DOMContentLoaded', () => {
         showForm(loginForm);
     });
 
+    showLoginFromMasterResetLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showForm(loginForm);
+    });
+
     // --- Lógica de Formulário (Simulada) ---
 
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const email = loginEmailInput.value;
+        const username = loginUsernameInput.value.toLowerCase();
         const password = loginPasswordInput.value;
 
         const users = JSON.parse(localStorage.getItem(USERS_DB_KEY)) || {};
-        const user = users[email];
+        const user = users[username];
 
         if (user && user.passwordHash === simpleHash(password)) {
             // Login bem-sucedido
             sessionStorage.setItem('isLoggedIn', 'true');
-            sessionStorage.setItem('currentUser', email); // Salva o usuário atual
+            sessionStorage.setItem('currentUser', username); // Salva o usuário atual
             window.location.href = 'index.html';
         } else {
-            alert('E-mail ou senha inválidos.');
+            alert('Usuário ou senha inválidos.');
         }
     });
 
     registerForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('register-name').value;
-        const email = document.getElementById('register-email').value;
+        const username = document.getElementById('register-username').value.toLowerCase();
         const password = document.getElementById('register-password').value;
 
-        if (!name || !email || !password) {
+        if (!name || !username || !password) {
             alert('Por favor, preencha todos os campos.');
+            return;
+        }
+
+        if (username.length < 3) {
+            alert('O nome de usuário deve ter no mínimo 3 caracteres.');
+            return;
+        }
+
+        if (password.length < 6) {
+            alert('A senha deve ter no mínimo 6 caracteres.');
             return;
         }
 
         const users = JSON.parse(localStorage.getItem(USERS_DB_KEY)) || {};
 
-        if (users[email]) {
-            alert('Este e-mail já está cadastrado.');
+        if (users[username]) {
+            alert('Este nome de usuário já está em uso.');
             return;
         }
 
-        users[email] = {
+        users[username] = {
             name: name,
             passwordHash: simpleHash(password),
             analysisHistory: [],
             referencePalette: [],
-            analysisName: '' // Adiciona o campo para o novo usuário
+            analysisName: '',
+            isMaster: username === 'master' // Define o usuário 'master'
         };
 
         localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-        alert('Cadastro realizado com sucesso! Agora você pode fazer login.');
+        alert('Cadastro realizado com sucesso! Faça o login para continuar.');
         registerForm.reset();
         showForm(loginForm);
     });
 
     forgotPasswordForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const email = document.getElementById('forgot-email').value;
-        if (!email) {
-            alert('Por favor, insira seu e-mail.');
+        const masterUsername = document.getElementById('master-username').value.toLowerCase();
+        const masterPassword = document.getElementById('master-password').value;
+
+        const users = JSON.parse(localStorage.getItem(USERS_DB_KEY)) || {};
+        const masterUser = users[masterUsername];
+
+        if (masterUser && masterUser.isMaster && masterUser.passwordHash === simpleHash(masterPassword)) {
+            // Login de master bem-sucedido, mostra o formulário de reset
+            showForm(masterResetForm);
+        } else {
+            alert('Credenciais de administrador inválidas.');
+        }
+    });
+
+    masterResetForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const userToReset = document.getElementById('user-to-reset').value.toLowerCase();
+        const newPassword = document.getElementById('new-password-for-user').value;
+
+        if (!userToReset || !newPassword) {
+            alert('Preencha o nome do usuário e a nova senha.');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            alert('A nova senha deve ter no mínimo 6 caracteres.');
             return;
         }
 
         const users = JSON.parse(localStorage.getItem(USERS_DB_KEY)) || {};
-        // Apenas prossiga se o usuário existir
-        if (users[email]) {
-            // Gera um token simples e um tempo de expiração (15 minutos)
-            const token = Date.now().toString(36) + Math.random().toString(36).substring(2);
-            const expiry = Date.now() + 15 * 60 * 1000; // 15 minutos a partir de agora
-
-            users[email].resetToken = token;
-            users[email].resetTokenExpiry = expiry;
-
+        if (users[userToReset]) {
+            users[userToReset].passwordHash = simpleHash(newPassword);
             localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-            
-            // SIMULAÇÃO: Em uma aplicação real, você enviaria um e-mail.
-            // Aqui, exibimos o link em um alerta para fins de teste.
-            const recoveryLink = `${window.location.origin}${window.location.pathname.replace('login.html', '')}reset-password.html?email=${encodeURIComponent(email)}&token=${token}`;
-            // Em um ambiente de desenvolvimento, é útil ver o link no console.
-            console.log('Link de recuperação gerado:', recoveryLink);
+            alert(`Senha do usuário '${userToReset}' foi redefinida com sucesso.`);
+            masterResetForm.reset();
+            showForm(loginForm);
+        } else {
+            alert(`Usuário '${userToReset}' não encontrado.`);
         }
-
-        // Mostra uma mensagem genérica por segurança, não revelando se o e-mail existe ou não.
-        alert('Se o e-mail estiver cadastrado, um link de recuperação foi enviado.');
-        showForm(loginForm);
     });
 });

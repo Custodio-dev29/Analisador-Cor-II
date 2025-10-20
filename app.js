@@ -2,8 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('image-canvas');
     const ctx = canvas && canvas.getContext ? canvas.getContext('2d', { willReadFrequently: true }) : null;    const zoomCanvas = document.getElementById('zoom-canvas');
     const zoomCtx = zoomCanvas ? zoomCanvas.getContext('2d') : null;
-    const imageUploader = document.getElementById('image-uploader');
-    const imageCapturer = document.getElementById('image-capturer');
+    const uploadBtn = document.getElementById('upload-btn');
+    const imageInput = document.getElementById('image-input');
     const imageClickMarker = document.getElementById('image-click-marker');
     const setAsRefBtn = document.getElementById('set-as-ref-btn');
     const addToPaletteBtn = document.getElementById('add-to-palette-btn');
@@ -379,8 +379,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Event Listeners
-    if (imageUploader) imageUploader.addEventListener('change', handleImageLoad);
-    if (imageCapturer) imageCapturer.addEventListener('change', handleImageLoad);
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => {
+            imageInput.click(); // Aciona o input de arquivo oculto
+        });
+    }
+    if (imageInput) imageInput.addEventListener('change', handleImageLoad);
     if (canvas && ctx) {
         canvas.addEventListener('click', handleCanvasClick);
         canvas.addEventListener('touchstart', handleCanvasClick, { passive: false });
@@ -564,7 +568,6 @@ document.addEventListener('DOMContentLoaded', () => {
             refColorMarker.style.visibility = 'visible';
             
             if (colorRuler) colorRuler.style.background = `linear-gradient(to right, #000000 0%, #808080 50%, #ffffff 100%)`;
-            if (colorRulerRef) colorRulerRef.style.background = refColor.hex;
         } else {
             refColorPreview.style.backgroundColor = '#f0f0f0';
             refHexCell.textContent = '-';

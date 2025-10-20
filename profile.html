@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <script>
+        // Verificação de segurança inicial
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Administrador - Analisador de Cores</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <main class="main-container">
+        <h1>Painel do Administrador</h1>
+        <section class="controls">
+            <a href="index.html" class="control-btn">Voltar ao Analisador</a>
+            <button id="logout-btn" class="control-btn danger-btn">Sair</button>
+        </section>
+
+        <section class="user-management-container">
+            <table class="analysis-history-table"> <!-- Reutilizando estilo da tabela de histórico -->
+                <caption>Usuários Cadastrados</caption>
+                <thead>
+                    <tr>
+                        <th>Nome de Usuário</th>
+                        <th>Nome Completo</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list-body">
+                    <!-- A lista de usuários será inserida aqui pelo JavaScript -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="shared.js" defer></script>
+    <script src="profile.js" defer></script>
+</body>
+</html>

@@ -17,14 +17,9 @@
         <h1>Analisador de Cores</h1>
         
         <section class="controls">
-            <label class="control-btn file-label" for="image-uploader">
-                <span class="visually-hidden">Carregar Imagem</span>
-                <input type="file" id="image-uploader" accept="image/*" class="file-input" aria-label="Selecione uma imagem para análise">
-            </label>
-            <label class="control-btn file-label" for="image-capturer">
-                <span class="visually-hidden">Tirar Foto</span>
-                <input type="file" id="image-capturer" accept="image/*" capture="environment" class="file-input" aria-label="Tire uma foto para análise">
-            </label>
+            <button id="upload-btn" class="control-btn">Carregar Imagem</button>
+            <input type="file" id="image-input" accept="image/*" class="file-input" hidden>
+            <a href="profile.html" id="admin-panel-link" class="control-btn" style="display: none;">Painel do Admin</a>
             <a href="history.html" class="control-btn">Ver Histórico</a>
             <button id="logout-btn" class="control-btn danger-btn">Sair</button>
 
@@ -120,10 +115,18 @@
     <script src="shared.js" defer></script>
     <script src="app.js" defer></script>
     <script>
+        // Mostra o link do painel de admin se o usuário for o master
+        document.addEventListener('DOMContentLoaded', () => {
+            const userData = getUserData();
+            if (userData && userData.isMaster) {
+                document.getElementById('admin-panel-link').style.display = 'inline-block';
+            }
+        });
         // Lógica de Logout
         document.getElementById('logout-btn').addEventListener('click', () => {
             sessionStorage.removeItem('isLoggedIn');
             sessionStorage.removeItem('currentUser');
+            // Não é necessário remover o nome da análise, pode ser útil para o próximo login.
             window.location.href = 'login.html';
         });
     </script>

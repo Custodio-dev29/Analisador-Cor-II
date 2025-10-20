@@ -52,6 +52,7 @@
         document.getElementById('logout-btn').addEventListener('click', () => {
             sessionStorage.removeItem('isLoggedIn');
             sessionStorage.removeItem('currentUser');
+            // Não é necessário remover o nome da análise, pode ser útil para o próximo login.
             window.location.href = 'login.html';
         });
     </script>

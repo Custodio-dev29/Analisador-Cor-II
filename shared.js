@@ -12,24 +12,24 @@ function simpleHash(str) {
     return hash.toString();
 }
 
-function getCurrentUserEmail() {
+function getCurrentUsername() {
     return sessionStorage.getItem('currentUser');
 }
 
 function getUserData() {
-    const email = getCurrentUserEmail();
-    if (!email) return null;
+    const username = getCurrentUsername();
+    if (!username) return null;
 
     const allUsers = JSON.parse(localStorage.getItem(USERS_DB_KEY)) || {};
-    return allUsers[email] || null;
+    return allUsers[username] || null;
 }
 
 function saveUserData(userData) {
-    const email = getCurrentUserEmail();
-    if (!email || !userData) return;
+    const username = getCurrentUsername();
+    if (!username || !userData) return;
 
     const allUsers = JSON.parse(localStorage.getItem(USERS_DB_KEY)) || {};
-    allUsers[email] = userData;
+    allUsers[username] = userData;
     localStorage.setItem(USERS_DB_KEY, JSON.stringify(allUsers));
 }
 

@@ -73,22 +73,6 @@ body {
     background-color: #c9302c; /* Um vermelho mais escuro */
 }
 
-.file-label {
-    display: inline-block;
-    position: relative;
-    overflow: hidden;
-    user-select: none;
-}
-
-.file-label input[type="file"] {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
-
 .settings-panel {
     background: #f8f9fa;
     border-radius: 4px;
@@ -524,6 +508,15 @@ body {
     justify-content: space-between;
     font-size: 0.85rem;
     margin-top: 0.5rem;
+}
+
+.form-note {
+    font-size: 0.8rem;
+    color: #666;
+    text-align: center;
+    background-color: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
 }
 
 @media (min-width: 992px) {
