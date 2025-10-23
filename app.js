@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!color || !colorRulerRef) return;
 
         const r = color.r, g = color.g, b = color.b;
-        const steps = 10; // Número de variações para um gradiente suave
+        const steps = 50; // Número de variações para um gradiente suave
         const gradientStops = [];
 
         // Criar variações da cor, mantendo o matiz mas alterando a luminosidade

@@ -296,13 +296,13 @@ body {
 }
 
 .color-ruler-container {
-    margin-top: 2rem;
+    margin-top:1rem;
     
 }
 
 .ruler-wrapper {
     position: relative;
-    margin: 50px 10px 20px 10px;
+    margin: 10px;
 }
 
 .ruler-marker {
