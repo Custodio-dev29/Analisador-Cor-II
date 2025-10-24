@@ -390,22 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.addEventListener('touchstart', handleCanvasClick, { passive: false });
     }
     if (setAsRefBtn) setAsRefBtn.addEventListener('click', handleSetAsReference);
-    // Adicionando tratamento para 'touchstart' para melhor responsividade em mobile
-    if (setAsRefBtn) setAsRefBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleSetAsReference();
-    });
-    if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleSaveAnalysis();
-    });
-
     if (addToPaletteBtn) addToPaletteBtn.addEventListener('click', handleAddToPalette);
-    if (addToPaletteBtn) addToPaletteBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        handleAddToPalette();
-    });
-
     if (saveAnalysisBtn) saveAnalysisBtn.addEventListener('click', handleSaveAnalysis);
     if (sampleSizeInput) sampleSizeInput.addEventListener('input', handleSampleSizeChange);
     if (analysisNameInput) analysisNameInput.addEventListener('input', () => saveAnalysisNameToStorage(analysisNameInput.value));
@@ -457,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!color || !colorRulerRef) return;
 
         const r = color.r, g = color.g, b = color.b;
-        const steps = 50; // Número de variações para um gradiente suave
+        const steps = 100; // Número de variações para um gradiente suave
         const gradientStops = [];
 
         // Criar variações da cor, mantendo o matiz mas alterando a luminosidade
@@ -607,14 +592,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function updateButtonStates() {
-        if (!setAsRefBtn || !addToPaletteBtn || !saveAnalysisBtn) return;
-
-        setAsRefBtn.disabled = !state.currentSelectedColor;
-        addToPaletteBtn.disabled = !state.currentSelectedColor;
-        saveAnalysisBtn.disabled = !(state.currentSelectedColor && state.activeReferenceColor);
-    }
-
     function drawImageOnCanvas(img) {
         try {
             if (!canvas || !ctx) return;
@@ -652,6 +629,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillText('Erro ao carregar imagem', canvas.width/2, canvas.height/2);
             throw err;
         }
+    }
+
+    function updateButtonStates() {
+        if (!setAsRefBtn || !addToPaletteBtn || !saveAnalysisBtn) return;
+
+        setAsRefBtn.disabled = !state.currentSelectedColor;
+        addToPaletteBtn.disabled = !state.currentSelectedColor;
+        saveAnalysisBtn.disabled = !(state.currentSelectedColor && state.activeReferenceColor);
     }
 
     // Checagem de suporte ao localStorage
